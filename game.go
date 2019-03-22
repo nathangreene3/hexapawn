@@ -113,6 +113,18 @@ func newBoard(m, n int) board {
 	return b
 }
 
+func copyBoard(b board) board {
+	c := make(board, 0, len(b))
+	n := len(b[0])
+
+	for i := range b {
+		c = append(c, make([]pawn, n))
+		copy(c[i], b[i])
+	}
+
+	return c
+}
+
 func (b board) move(m, n int, a action) {
 	switch b[m][n] {
 	case whitePawn:
@@ -177,4 +189,26 @@ func (g *game) updateState() {
 	default:
 		g.s = illegal
 	}
+}
+
+func equalBoards(b, c board) bool {
+	m := len(b)
+	if m != len(c) {
+		return false
+	}
+
+	n := len(b[0])
+	if n != len(c[0]) {
+		return false
+	}
+
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			if b[i][j] != c[i][j] {
+				return false
+			}
+		}
+	}
+
+	return true
 }

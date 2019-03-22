@@ -113,3 +113,35 @@ var (
 		[]pawn{' ', 'w', ' '},
 	}
 )
+
+type actProb []float64
+
+type autoPlayer []position
+
+type position struct {
+	b board
+	a actProb
+}
+
+func newPosition(b board) *position {
+	return &position{
+		b: copyBoard(b),
+		a: actProb{1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
+	}
+}
+
+func newAutoPlayer(cap int) autoPlayer {
+	if cap < 0 {
+		panic("newNPC: capacity must be non-negative")
+	}
+
+	return make(autoPlayer, 0, cap)
+}
+
+func (npc autoPlayer) selectAction(b board) {
+	// index := sort.Search(npc, func(i int) bool { return equalBoards(npc[i], b) })
+	// n:=len(npc)
+	// if index<n{
+
+	// }
+}
