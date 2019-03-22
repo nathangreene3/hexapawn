@@ -7,11 +7,13 @@ type mode byte
 type pawn byte
 type state byte
 type board [][]pawn
+type history []board
 
 type game struct {
 	b board
 	s state
 	m mode
+	h history
 }
 
 const (
@@ -41,48 +43,55 @@ func newGame(m, n int, md mode) *game {
 		b: newBoard(m, n),
 		s: whiteTurn,
 		m: md,
+		h: make(history, 0, 32), // TODO: Find the total number of states (24?)
 	}
 }
 
-func (g *game) turn() {
+func (g *game) turn() bool {
 	switch g.s {
 	case whiteTurn:
 		switch g.m {
 		case pvp, pvc:
 			// player move
+			// return move result
 		case cvp, cvc:
 			// random move by npc
+			// return move result
 		}
-
-		g.updateState()
 	case blackTurn:
 		switch g.m {
 		case pvp, cvp:
 			// player move
+			// return move result
 		case pvc, cvc:
 			// random move by npc
+			// return move result
 		}
-
-		g.updateState()
 	}
+	return false
 }
 
 func (g *game) play() {
-	for {
-		g.turn()
-		switch g.s {
-		case whiteWin:
-			fmt.Println("WHITE WINS")
-			break
-		case blackWin:
-			fmt.Println("BLACK WINS")
-			break
-		case illegal:
-			fmt.Println("ILLEGAL STATE")
-			break
-		case stalemate:
-			fmt.Println("STALEMATE")
+	g.h = append(g.h, copyBoard(g.b))
+
+	for g.s == whiteTurn || g.s == blackTurn {
+		if g.turn() {
+			g.h = append(g.h, copyBoard(g.b))
+			g.updateState()
 		}
+
+		g.s = stalemate
+	}
+
+	switch g.s {
+	case whiteWin:
+		fmt.Println("WHITE WINS")
+	case blackWin:
+		fmt.Println("BLACK WINS")
+	case illegal:
+		fmt.Println("ILLEGAL STATE")
+	case stalemate:
+		fmt.Println("STALEMATE")
 	}
 }
 
@@ -125,45 +134,57 @@ func copyBoard(b board) board {
 	return c
 }
 
-func (b board) move(m, n int, a action) {
-	switch b[m][n] {
+// move returns true if the game board is altered (a player has selected a valid move) and false if otherwise.
+func (g *game) move(m, n int, a action) bool {
+	switch g.b[m][n] {
 	case whitePawn:
 		switch a {
 		case forward:
-			if 0 < m && b[m-1][n] == noPawn {
-				b[m-1][n] = whitePawn
-				b[m][n] = noPawn
+			if 0 < m && g.b[m-1][n] == noPawn {
+				g.b[m-1][n] = whitePawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		case captureLeft:
-			if 0 < m && 0 < n && b[m-1][n-1] == blackPawn {
-				b[m-1][n-1] = whitePawn
-				b[m][n] = noPawn
+			if 0 < m && 0 < n && g.b[m-1][n-1] == blackPawn {
+				g.b[m-1][n-1] = whitePawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		case captureRight:
-			if 0 < m && n+1 < len(b[0]) && b[m-1][n+1] == blackPawn {
-				b[m-1][n+1] = whitePawn
-				b[m][n] = noPawn
+			if 0 < m && n+1 < len(g.b[0]) && g.b[m-1][n+1] == blackPawn {
+				g.b[m-1][n+1] = whitePawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		}
+
+		return false
 	case blackPawn:
 		switch a {
 		case forward:
-			if m+1 < len(b) && b[m][n] == noPawn {
-				b[m+1][n] = blackPawn
-				b[m][n] = noPawn
+			if m+1 < len(g.b) && g.b[m][n] == noPawn {
+				g.b[m+1][n] = blackPawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		case captureLeft:
-			if m+1 < len(b) && n+1 < len(b[0]) && b[m+1][n+1] == whitePawn {
-				b[m+1][n+1] = blackPawn
-				b[m][n] = noPawn
+			if m+1 < len(g.b) && n+1 < len(g.b[0]) && g.b[m+1][n+1] == whitePawn {
+				g.b[m+1][n+1] = blackPawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		case captureRight:
-			if m+1 < len(b) && n-1 < len(b[0]) && b[m+1][n-1] == whitePawn {
-				b[m+1][n-1] = blackPawn
-				b[m][n] = noPawn
+			if m+1 < len(g.b) && n-1 < len(g.b[0]) && g.b[m+1][n-1] == whitePawn {
+				g.b[m+1][n-1] = blackPawn
+				g.b[m][n] = noPawn
+				return true
 			}
 		}
+
+		return false
 	}
+	return false
 }
 
 func (g *game) updateState() {
@@ -191,6 +212,7 @@ func (g *game) updateState() {
 	}
 }
 
+// equalBoards returns true if two boards are equal in dimension and position and false if otherwise.
 func equalBoards(b, c board) bool {
 	m := len(b)
 	if m != len(c) {
