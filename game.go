@@ -17,7 +17,7 @@ type game struct {
 }
 
 const (
-	noPawn    = pawn(' ')
+	space     = pawn(' ')
 	whitePawn = pawn('w')
 	blackPawn = pawn('b')
 
@@ -95,6 +95,67 @@ func (g *game) play() {
 	}
 }
 
+func (g *game) availActions(m, n int) []action {
+	a := make([]action, 0, 3)
+
+	lenB := len(g.b)
+	lenB0 := len(g.b[0])
+	switch g.s {
+	case whiteTurn:
+		if g.b[m][n] == whitePawn && 0 < m {
+			if g.b[m-1][n] == space {
+				a = append(a, forward)
+			}
+
+			switch n {
+			case 0:
+				if g.b[m-1][n+1] == blackPawn {
+					a = append(a, captureRight)
+				}
+			case lenB0 - 1:
+				if g.b[m-1][n-1] == blackPawn {
+					a = append(a, captureLeft)
+				}
+			default:
+				if g.b[m-1][n-1] == blackPawn {
+					a = append(a, captureLeft)
+				}
+
+				if g.b[m-1][n+1] == blackPawn {
+					a = append(a, captureRight)
+				}
+			}
+		}
+	case blackTurn:
+		if g.b[m][n] == blackPawn && m+1 < lenB {
+			if g.b[m+1][n] == space {
+				a = append(a, forward)
+			}
+
+			switch n {
+			case 0:
+				if g.b[m+1][n+1] == whitePawn {
+					a = append(a, captureLeft)
+				}
+			case lenB0 - 1:
+				if g.b[m+1][n-1] == whitePawn {
+					a = append(a, captureRight)
+				}
+			default:
+				if g.b[m+1][n-1] == whitePawn {
+					a = append(a, captureRight)
+				}
+
+				if g.b[m+1][n+1] == whitePawn {
+					a = append(a, captureLeft)
+				}
+			}
+		}
+	}
+
+	return a
+}
+
 func newBoard(m, n int) board {
 	if m < 3 || n < 3 {
 		panic("newBoard: diminsions cannot be less than three")
@@ -110,7 +171,7 @@ func newBoard(m, n int) board {
 	for i := 1; i < m-1; i++ {
 		b = append(b, make([]pawn, 0, n))
 		for j := 0; j < n; j++ {
-			b[i] = append(b[i], noPawn)
+			b[i] = append(b[i], space)
 		}
 	}
 
@@ -140,21 +201,21 @@ func (g *game) move(m, n int, a action) bool {
 	case whitePawn:
 		switch a {
 		case forward:
-			if 0 < m && g.b[m-1][n] == noPawn {
+			if 0 < m && g.b[m-1][n] == space {
 				g.b[m-1][n] = whitePawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		case captureLeft:
 			if 0 < m && 0 < n && g.b[m-1][n-1] == blackPawn {
 				g.b[m-1][n-1] = whitePawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		case captureRight:
 			if 0 < m && n+1 < len(g.b[0]) && g.b[m-1][n+1] == blackPawn {
 				g.b[m-1][n+1] = whitePawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		}
@@ -163,27 +224,28 @@ func (g *game) move(m, n int, a action) bool {
 	case blackPawn:
 		switch a {
 		case forward:
-			if m+1 < len(g.b) && g.b[m][n] == noPawn {
+			if m+1 < len(g.b) && g.b[m][n] == space {
 				g.b[m+1][n] = blackPawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		case captureLeft:
 			if m+1 < len(g.b) && n+1 < len(g.b[0]) && g.b[m+1][n+1] == whitePawn {
 				g.b[m+1][n+1] = blackPawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		case captureRight:
 			if m+1 < len(g.b) && n-1 < len(g.b[0]) && g.b[m+1][n-1] == whitePawn {
 				g.b[m+1][n-1] = blackPawn
-				g.b[m][n] = noPawn
+				g.b[m][n] = space
 				return true
 			}
 		}
 
 		return false
 	}
+
 	return false
 }
 

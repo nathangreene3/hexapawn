@@ -114,34 +114,26 @@ var (
 	}
 )
 
-type actProb []float64
-
+type weight float64
 type autoPlayer []position
 
+type pawnOpt struct {
+	m int
+	n int
+	a action
+	p weight
+}
+
 type position struct {
-	b board
-	a actProb
+	b  board
+	s  state
+	po []*pawnOpt
 }
 
-func newPosition(b board) *position {
-	return &position{
-		b: copyBoard(b),
-		a: actProb{1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0},
-	}
-}
+// func (ap autoPlayer) insertPosition(p *position) {
+// 	sort.Sort(ap)
+// }
 
-func newAutoPlayer(cap int) autoPlayer {
-	if cap < 0 {
-		panic("newNPC: capacity must be non-negative")
-	}
-
-	return make(autoPlayer, 0, cap)
-}
-
-func (npc autoPlayer) selectAction(b board) {
-	// index := sort.Search(npc, func(i int) bool { return equalBoards(npc[i], b) })
-	// n:=len(npc)
-	// if index<n{
-
-	// }
-}
+// func (ap autoPlayer)Less(i,j int)bool{
+// 	return
+// }
