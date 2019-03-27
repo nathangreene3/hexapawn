@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 var (
 	// White to move from start
 	p00 = board{
@@ -115,7 +117,7 @@ var (
 )
 
 type weight float64
-type autoPlayer []position
+type autoPlayer []*position
 
 type pawnOpt struct {
 	m int
@@ -130,10 +132,35 @@ type position struct {
 	po []*pawnOpt
 }
 
-// func (ap autoPlayer) insertPosition(p *position) {
-// 	sort.Sort(ap)
-// }
+func (ap autoPlayer) insert(p *position) {
+	n := len(ap)
+	switch {
+	case n == 0:
+		ap = append(ap, p)
+	case sort.Search(n, func(i int) bool { return equalBoards(ap[i].b, p.b) && ap[i].s == p.s }) == n:
+		ap = append(ap, p)
+		sort.Sort(ap)
+	}
+}
 
-// func (ap autoPlayer)Less(i,j int)bool{
-// 	return
-// }
+func (ap autoPlayer) Less(i, j int) bool {
+	for a := range ap[i].b {
+		for b := range ap[i].b[a] {
+			if ap[j].b[a][b] < ap[i].b[a][b] {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+func (ap autoPlayer) Len() int {
+	return len(ap)
+}
+
+func (ap autoPlayer) Swap(i, j int) {
+	t := ap[i]
+	ap[i] = ap[j]
+	ap[j] = t
+}
