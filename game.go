@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
+	"math/rand"
 	"strings"
 )
 
+// action represents
 type action byte
 type mode byte
 type pawn byte
@@ -49,10 +52,7 @@ func (g *game) String() string {
 
 	dashPlus := []byte{'-', '+'}
 	barnl := []byte{'|', '\n'}
-	line := make([]byte, 0, n+2)
-	line = append(line, '+')
-	line = append(line, bytes.Repeat(dashPlus, n)...)
-	line = append(line, '\n')
+	line := bytes.Join([][]byte{[]byte{'+'}, bytes.Repeat(dashPlus, n), []byte{'\n'}}, []byte{})
 
 	for i := range g.b {
 		bldr.Write(line)
@@ -128,7 +128,8 @@ func (g *game) availActions(m, n int) []action {
 	a := make([]action, 0, 4)
 
 	lenB := len(g.b)
-	lenB0 := len(g.b[0])
+	lenB0m1 := len(g.b[0]) - 1
+
 	switch g.s {
 	case whiteTurn:
 		if g.b[m][n] == whitePawn && 0 < m {
@@ -141,7 +142,7 @@ func (g *game) availActions(m, n int) []action {
 				if g.b[m-1][n+1] == blackPawn {
 					a = append(a, captureRight)
 				}
-			case lenB0 - 1:
+			case lenB0m1:
 				if g.b[m-1][n-1] == blackPawn {
 					a = append(a, captureLeft)
 				}
@@ -166,7 +167,7 @@ func (g *game) availActions(m, n int) []action {
 				if g.b[m+1][n+1] == whitePawn {
 					a = append(a, captureLeft)
 				}
-			case lenB0 - 1:
+			case lenB0m1:
 				if g.b[m+1][n-1] == whitePawn {
 					a = append(a, captureRight)
 				}
@@ -183,6 +184,78 @@ func (g *game) availActions(m, n int) []action {
 	}
 
 	return a
+}
+
+// train returns an auto player that is capable of playing hexapawn.
+func train(m, n, numGames int, p pawn) autoPlayer {
+	ap := make(autoPlayer, 0, 32)
+	var g *game
+	var psn *position
+	var choice weight
+	var index int
+	var a []action
+
+	for ; 0 < numGames; numGames-- {
+		g = newGame(m, n, cvc)
+
+		for {
+			g.h = append(g.h, copyBoard(g.b))
+
+			switch g.s {
+			case whiteTurn:
+				switch p {
+				case whitePawn:
+					psn = &position{
+						b:  g.b,
+						s:  g.s,
+						po: make([]*pawnOpt, 0, 4),
+					}
+
+					for i := range g.b {
+						for j := range g.b[i] {
+							if g.b[i][j] != whitePawn {
+								continue
+							}
+
+							a = g.availActions(i, j)
+							for k := range a {
+								psn.po = append(psn.po, &pawnOpt{m: i, n: j, a: a[k]})
+							}
+						}
+					}
+					ap.insert(psn)
+
+					choice = weight(rand.Float64())
+					index = ap.index(psn)
+
+					for _, po := range ap[index].po {
+						if choice < po.p {
+							g.move(po.m, po.n, po.a)
+							break
+						}
+
+						choice -= po.p
+					}
+				case blackPawn:
+				}
+			case blackTurn:
+			case whiteWin:
+			case blackWin:
+			case stalemate:
+				break
+			case illegal:
+				log.Fatal("train: reached illegal state")
+				break
+			default:
+				log.Fatal("train: reached unknown state")
+				break
+			}
+
+			g.updateState()
+		}
+	}
+
+	return ap
 }
 
 func newBoard(m, n int) board {

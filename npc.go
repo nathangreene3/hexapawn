@@ -119,6 +119,7 @@ var (
 type weight float64
 type autoPlayer []*position
 
+// pawnOpt is an available action at a position (m,n) with a probability weight of being selected.
 type pawnOpt struct {
 	m int
 	n int
@@ -132,6 +133,7 @@ type position struct {
 	po []*pawnOpt
 }
 
+// insert a position into an auto player if it doesn't already exist.
 func (ap autoPlayer) insert(p *position) {
 	n := len(ap)
 	switch {
@@ -149,6 +151,7 @@ func (ap autoPlayer) remove(i int) *position {
 	return p
 }
 
+// index returns the index a position is found in an auto player. If the position is not found, len(ap) is returned. Comparisions are made on the board and state only.
 func (ap autoPlayer) index(p *position) int {
 	return sort.Search(len(ap), func(i int) bool { return equalBoards(ap[i].b, p.b) && ap[i].s == p.s })
 }
