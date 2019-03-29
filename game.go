@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"strings"
+)
 
 type action byte
 type mode byte
@@ -32,22 +36,51 @@ const (
 	captureLeft
 	captureRight
 
-	pvp mode = iota
-	pvc
-	cvp
-	cvc
+	pvp mode = iota // Player vs player
+	pvc             // Player vs computer
+	cvp             // Computer vs player
+	cvc             // Computer vs computer
 )
+
+func (g *game) String() string {
+	n := len(g.b[0])
+	bldr := strings.Builder{}
+	bldr.Grow((2*len(g.b) + 1) * (2*n + 1))
+
+	dashPlus := []byte{'-', '+'}
+	barnl := []byte{'|', '\n'}
+	line := make([]byte, 0, n+2)
+	line = append(line, '+')
+	line = append(line, bytes.Repeat(dashPlus, n)...)
+	line = append(line, '\n')
+
+	for i := range g.b {
+		bldr.Write(line)
+
+		for j := range g.b[i] {
+			bldr.WriteByte('|')
+			bldr.WriteByte(byte(g.b[i][j]))
+		}
+
+		bldr.Write(barnl)
+	}
+
+	bldr.WriteByte('+')
+	bldr.Write(bytes.Repeat(dashPlus, n))
+
+	return bldr.String()
+}
 
 func newGame(m, n int, md mode) *game {
 	return &game{
 		b: newBoard(m, n),
 		s: whiteTurn,
 		m: md,
-		h: make(history, 0, 32), // TODO: Find the total number of states (24?)
+		h: make(history, 0, 32), // TODO: Find the total number of legal states (24?)
 	}
 }
 
-func (g *game) turn() bool {
+func (g *game) turn() {
 	switch g.s {
 	case whiteTurn:
 		switch g.m {
@@ -68,19 +101,15 @@ func (g *game) turn() bool {
 			// return move result
 		}
 	}
-	return false
 }
 
 func (g *game) play() {
 	g.h = append(g.h, copyBoard(g.b))
 
 	for g.s == whiteTurn || g.s == blackTurn {
-		if g.turn() {
-			g.h = append(g.h, copyBoard(g.b))
-			g.updateState()
-		}
-
-		g.s = stalemate
+		g.turn()
+		g.updateState()
+		g.h = append(g.h, copyBoard(g.b))
 	}
 
 	switch g.s {
@@ -96,7 +125,7 @@ func (g *game) play() {
 }
 
 func (g *game) availActions(m, n int) []action {
-	a := make([]action, 0, 3)
+	a := make([]action, 0, 4)
 
 	lenB := len(g.b)
 	lenB0 := len(g.b[0])
@@ -195,8 +224,8 @@ func copyBoard(b board) board {
 	return c
 }
 
-// move returns true if the game board is altered (a player has selected a valid move) and false if otherwise.
-func (g *game) move(m, n int, a action) bool {
+// move performs an action altering the position of the board. State is NOT altered.
+func (g *game) move(m, n int, a action) {
 	switch g.b[m][n] {
 	case whitePawn:
 		switch a {
@@ -204,49 +233,37 @@ func (g *game) move(m, n int, a action) bool {
 			if 0 < m && g.b[m-1][n] == space {
 				g.b[m-1][n] = whitePawn
 				g.b[m][n] = space
-				return true
 			}
 		case captureLeft:
 			if 0 < m && 0 < n && g.b[m-1][n-1] == blackPawn {
 				g.b[m-1][n-1] = whitePawn
 				g.b[m][n] = space
-				return true
 			}
 		case captureRight:
 			if 0 < m && n+1 < len(g.b[0]) && g.b[m-1][n+1] == blackPawn {
 				g.b[m-1][n+1] = whitePawn
 				g.b[m][n] = space
-				return true
 			}
 		}
-
-		return false
 	case blackPawn:
 		switch a {
 		case forward:
 			if m+1 < len(g.b) && g.b[m][n] == space {
 				g.b[m+1][n] = blackPawn
 				g.b[m][n] = space
-				return true
 			}
 		case captureLeft:
 			if m+1 < len(g.b) && n+1 < len(g.b[0]) && g.b[m+1][n+1] == whitePawn {
 				g.b[m+1][n+1] = blackPawn
 				g.b[m][n] = space
-				return true
 			}
 		case captureRight:
 			if m+1 < len(g.b) && n-1 < len(g.b[0]) && g.b[m+1][n-1] == whitePawn {
 				g.b[m+1][n-1] = blackPawn
 				g.b[m][n] = space
-				return true
 			}
 		}
-
-		return false
 	}
-
-	return false
 }
 
 func (g *game) updateState() {

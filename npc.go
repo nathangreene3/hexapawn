@@ -137,10 +137,20 @@ func (ap autoPlayer) insert(p *position) {
 	switch {
 	case n == 0:
 		ap = append(ap, p)
-	case sort.Search(n, func(i int) bool { return equalBoards(ap[i].b, p.b) && ap[i].s == p.s }) == n:
+	case ap.index(p) == n:
 		ap = append(ap, p)
 		sort.Sort(ap)
 	}
+}
+
+func (ap autoPlayer) remove(i int) *position {
+	p := ap[i]
+	ap = append(ap[:i], ap[i+1:]...)
+	return p
+}
+
+func (ap autoPlayer) index(p *position) int {
+	return sort.Search(len(ap), func(i int) bool { return equalBoards(ap[i].b, p.b) && ap[i].s == p.s })
 }
 
 func (ap autoPlayer) Less(i, j int) bool {

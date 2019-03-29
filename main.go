@@ -1,7 +1,10 @@
 package main
 
-func main() {
+import "fmt"
 
+func main() {
+	g := newGame(3, 3, pvp)
+	fmt.Println(g.String())
 }
 
 func readMove(s state) (int, int, action) {
