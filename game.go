@@ -8,13 +8,20 @@ import (
 	"strings"
 )
 
-// action represents
 type action byte
 type mode byte
 type pawn byte
 type state byte
 type board [][]pawn
-type history []board
+
+// type history []*event
+type history []*position
+
+type event struct {
+	b board  // Board BEFORE action has been taken
+	a action // Action taken on this board
+	s state  // Resulting state of board BEFORE action has been taken
+}
 
 type game struct {
 	b board
@@ -24,25 +31,29 @@ type game struct {
 }
 
 const (
+	// Actions
+	forward action = iota
+	captureLeft
+	captureRight
+
+	// Modes
+	pvp mode = iota // Player vs player
+	pvc             // Player vs computer
+	cvp             // Computer vs player
+	cvc             // Computer vs computer
+
+	// Pawns
 	space     = pawn(' ')
 	whitePawn = pawn('w')
 	blackPawn = pawn('b')
 
+	// States
 	illegal state = iota
 	stalemate
 	whiteTurn
 	blackTurn
 	whiteWin
 	blackWin
-
-	forward action = iota
-	captureLeft
-	captureRight
-
-	pvp mode = iota // Player vs player
-	pvc             // Player vs computer
-	cvp             // Computer vs player
-	cvc             // Computer vs computer
 )
 
 func (g *game) String() string {
@@ -104,12 +115,12 @@ func (g *game) turn() {
 }
 
 func (g *game) play() {
-	g.h = append(g.h, copyBoard(g.b))
+	// g.h = append(g.h, copyBoard(g.b))
 
 	for g.s == whiteTurn || g.s == blackTurn {
 		g.turn()
 		g.updateState()
-		g.h = append(g.h, copyBoard(g.b))
+		// g.h = append(g.h, copyBoard(g.b))
 	}
 
 	switch g.s {
@@ -186,62 +197,127 @@ func (g *game) availActions(m, n int) []action {
 	return a
 }
 
+func (g *game) availPawnOpts() []*pawnOpt {
+	po := make([]*pawnOpt, 0, 4)
+	var a []action // Set of actions for each position (i,j)
+	var w weight   // Weight to apply to each action
+	var d weight   // Difference in each action weight
+	var n int      // Number of available actions
+
+	for i := range g.b {
+		for j := range g.b[i] {
+			a = g.availActions(i, j)
+			n = len(a)
+			if n == 0 {
+				continue
+			}
+
+			d = weight(1.0 / float64(n))
+			for k := range a {
+				w += d
+				po = append(po, &pawnOpt{m: i, n: j, a: a[k], p: w})
+			}
+
+			w = 0
+		}
+	}
+
+	return po
+}
+
 // train returns an auto player that is capable of playing hexapawn.
-func train(m, n, numGames int, p pawn) autoPlayer {
+func train(m, n, numGames int, t state) autoPlayer {
 	ap := make(autoPlayer, 0, 32)
 	var g *game
+	var poSlc *pawnOpt
+	var pawnOpts []*pawnOpt
 	var psn *position
 	var choice weight
 	var index int
-	var a []action
+	// var apLen int
+	// var histLen int
+	// var b board
+	// var a action
+	// var s state
 
 	for ; 0 < numGames; numGames-- {
 		g = newGame(m, n, cvc)
 
+		// Alternate turns until neither side can move (that is, win, illegal, or stalemate state is reached)
 		for {
-			g.h = append(g.h, copyBoard(g.b))
-
+			psn = &position{b: g.b, s: g.s, poSlc: nil, po: g.availPawnOpts()}
 			switch g.s {
 			case whiteTurn:
-				switch p {
-				case whitePawn:
-					psn = &position{
-						b:  g.b,
-						s:  g.s,
-						po: make([]*pawnOpt, 0, 4),
-					}
-
-					for i := range g.b {
-						for j := range g.b[i] {
-							if g.b[i][j] != whitePawn {
-								continue
-							}
-
-							a = g.availActions(i, j)
-							for k := range a {
-								psn.po = append(psn.po, &pawnOpt{m: i, n: j, a: a[k]})
-							}
-						}
-					}
+				switch t {
+				case whiteTurn:
 					ap.insert(psn)
-
 					choice = weight(rand.Float64())
 					index = ap.index(psn)
-
 					for _, po := range ap[index].po {
-						if choice < po.p {
+						if choice <= po.p {
 							g.move(po.m, po.n, po.a)
+							psn.poSlc = po
 							break
 						}
-
-						choice -= po.p
 					}
-				case blackPawn:
+				case blackTurn:
+					pawnOpts = g.availPawnOpts()
+					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
+					g.move(poSlc.m, poSlc.n, poSlc.a)
+					psn.poSlc = poSlc
+				default:
+					log.Fatal("turn: invalid state entered")
 				}
 			case blackTurn:
+				switch t {
+				case whiteTurn:
+					pawnOpts = g.availPawnOpts()
+					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
+					g.move(poSlc.m, poSlc.n, poSlc.a)
+					psn.poSlc = poSlc
+				case blackTurn:
+					ap.insert(psn)
+					choice = weight(rand.Float64())
+					index = ap.index(psn)
+					for _, po := range ap[index].po {
+						if choice <= po.p {
+							g.move(po.m, po.n, po.a)
+							psn.poSlc = po
+							break
+						}
+					}
+				default:
+					log.Fatal("turn: invalid state entered")
+				}
 			case whiteWin:
+				switch t {
+				case whiteTurn:
+					// apLen = len(ap)
+					// histLen = len(g.h)
+					// for i := 0; i < histLen; i += 2 {
+					// 	// index = ap.index(g.h[i].)
+					// 	if index == apLen {
+					// 		log.Fatal("train: failed to find board in autoPlayer to update weights")
+					// 	}
+
+					// 	for j := range ap[index].po {
+
+					// 	}
+					// }
+				case blackTurn:
+				}
+				break
 			case blackWin:
+				switch t {
+				case whiteTurn:
+				case blackTurn:
+				}
+				break
 			case stalemate:
+				switch t {
+				case whiteTurn:
+				case blackTurn:
+				}
 				break
 			case illegal:
 				log.Fatal("train: reached illegal state")
@@ -252,6 +328,7 @@ func train(m, n, numGames int, p pawn) autoPlayer {
 			}
 
 			g.updateState()
+			g.h = append(g.h, psn)
 		}
 	}
 
@@ -379,6 +456,29 @@ func equalBoards(b, c board) bool {
 	for i := 0; i < m; i++ {
 		for j := 0; j < n; j++ {
 			if b[i][j] != c[i][j] {
+				return false
+			}
+		}
+	}
+
+	return true
+}
+
+// symmetricEqualBoards returns true if two boards are equal under row reflection and false if otherwise. That is, b == reflect(c) is returned.
+func symmetricEqualBoards(b, c board) bool {
+	m := len(b)
+	if m != len(c) {
+		return false
+	}
+
+	n := len(b[0])
+	if n != len(c[0]) {
+		return false
+	}
+
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			if b[i][j] != c[i][n-j-1] {
 				return false
 			}
 		}

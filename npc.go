@@ -128,9 +128,10 @@ type pawnOpt struct {
 }
 
 type position struct {
-	b  board
-	s  state
-	po []*pawnOpt
+	b     board      // Board position
+	s     state      // State of the game
+	poSlc *pawnOpt   // Pawn option selected
+	po    []*pawnOpt // Available pawn options
 }
 
 // insert a position into an auto player if it doesn't already exist.

@@ -2,9 +2,32 @@ package main
 
 import "fmt"
 
+type thing struct {
+	a int
+	b *int
+}
+
+type things []*thing
+
 func main() {
-	g := newGame(3, 3, pvp)
-	fmt.Println(g.String())
+	// g := newGame(3, 3, pvp)
+	// fmt.Println(g.String())
+
+	v := 1
+	x := thing{a: 1, b: &v}
+	y := &thing{a: 1, b: &v}
+	ts := things{}
+	fmt.Println(ts, x, y)
+	insert(ts, &x)
+	x.a++
+	*x.b++
+	y.a++
+	*y.b++
+	fmt.Println(ts, x, y)
+}
+
+func insert(ts things, t *thing) {
+	ts = append(ts, t)
 }
 
 func readMove(s state) (int, int, action) {
