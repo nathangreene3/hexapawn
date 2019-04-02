@@ -2,25 +2,9 @@ package main
 
 import "fmt"
 
-type thing struct {
-	a int
-	b *int
-}
-
-type things []*thing
-
 func main() {
-	v := 1
-	x := &thing{a: 1, b: &v}
-	arr := things{}
-	arr = append(arr, x)
-	x.a++
-	*x.b++
-	fmt.Println(arr[0], x)
-}
-
-func insert(ts things, t *thing) {
-	ts = append(ts, t)
+	a := make([]int, 0)
+	fmt.Println(a, len(a), cap(a))
 }
 
 func readMove(s state) (int, int, action) {

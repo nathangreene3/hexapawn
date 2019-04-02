@@ -1,30 +1,37 @@
 package main
 
+// board is an m-by-n array of pieces.
+type board [][]pawn
+
+// newBoard returns a new board with black on top, white on bottom. Panics if m or n are less than three.
 func newBoard(m, n int) board {
 	if m < 3 || n < 3 {
 		panic("newBoard: diminsions cannot be less than three")
 	}
 
-	b := make(board, 0, m)
+	brd := make(board, 0, m)
 
-	b = append(b, make([]pawn, 0, n))
+	// Add black pawns to first row
+	brd = append(brd, make([]pawn, 0, n))
 	for i := 0; i < n; i++ {
-		b[0] = append(b[0], blackPawn)
+		brd[0] = append(brd[0], blackPawn)
 	}
 
+	// Add spaces to middle rows
 	for i := 1; i < m-1; i++ {
-		b = append(b, make([]pawn, 0, n))
+		brd = append(brd, make([]pawn, 0, n))
 		for j := 0; j < n; j++ {
-			b[i] = append(b[i], space)
+			brd[i] = append(brd[i], space)
 		}
 	}
 
-	b = append(b, make([]pawn, 0, n))
+	// Add white pawns to last row
+	brd = append(brd, make([]pawn, 0, n))
 	for i := 0; i < n; i++ {
-		b[m-1] = append(b[m-1], whitePawn)
+		brd[m-1] = append(brd[m-1], whitePawn)
 	}
 
-	return b
+	return brd
 }
 
 func copyBoard(b board) board {
@@ -40,20 +47,20 @@ func copyBoard(b board) board {
 }
 
 // equalBoards returns true if two boards are equal in dimension and position and false if otherwise.
-func equalBoards(b, c board) bool {
-	m := len(b)
-	if m != len(c) {
+func equalBoards(brd0, brd1 board) bool {
+	m := len(brd0)
+	if m != len(brd1) {
 		return false
 	}
 
-	n := len(b[0])
-	if n != len(c[0]) {
+	n := len(brd0[0])
+	if n != len(brd1[0]) {
 		return false
 	}
 
 	for i := 0; i < m; i++ {
 		for j := 0; j < n; j++ {
-			if b[i][j] != c[i][j] {
+			if brd0[i][j] != brd1[i][j] {
 				return false
 			}
 		}
@@ -62,21 +69,21 @@ func equalBoards(b, c board) bool {
 	return true
 }
 
-// symmetricEqualBoards returns true if two boards are equal under row reflection and false if otherwise. That is, b == reflect(c) is returned.
-func symmetricEqualBoards(b, c board) bool {
-	m := len(b)
-	if m != len(c) {
+// symmetricEqualBoards returns true if two boards are equal reflection across the vertical axis and false if otherwise. That is, b == reflect(c) is returned.
+func symmetricEqualBoards(brd0, brd1 board) bool {
+	m := len(brd0)
+	if m != len(brd1) {
 		return false
 	}
 
-	n := len(b[0])
-	if n != len(c[0]) {
+	n := len(brd0[0])
+	if n != len(brd1[0]) {
 		return false
 	}
 
 	for i := 0; i < m; i++ {
 		for j := 0; j < n; j++ {
-			if b[i][j] != c[i][n-j-1] {
+			if brd0[i][j] != brd1[i][n-j-1] {
 				return false
 			}
 		}

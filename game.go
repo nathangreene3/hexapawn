@@ -18,17 +18,15 @@ type pawn byte
 // state indicates how the game will procede.
 type state byte
 
-// board is an m-by-n array of pieces.
-type board [][]pawn
-
 // game joins a board, state, mode, and a history of board positions reached in alternating turns.
 type game struct {
-	b board   // Current board
-	s state   // Current state
-	m mode    // Type to play
-	h history // Ordered set of board positions
+	brd board   // Current board
+	st  state   // Current state
+	md  mode    // Type to play
+	hst history // Ordered set of board positions
 }
 
+// Game constants
 const (
 	// Actions
 	forward action = iota
@@ -56,21 +54,21 @@ const (
 )
 
 // String returns a string representing a game.
-func (g *game) String() string {
-	n := len(g.b[0])
+func (gm *game) String() string {
+	n := len(gm.brd[0])
 	bldr := strings.Builder{}
-	bldr.Grow((2*len(g.b) + 1) * (2*n + 1))
+	bldr.Grow((2*len(gm.brd) + 1) * (2*n + 1))
 
 	dashPlus := []byte{'-', '+'}
 	barnl := []byte{'|', '\n'}
 	line := bytes.Join([][]byte{[]byte{'+'}, bytes.Repeat(dashPlus, n), []byte{'\n'}}, []byte{})
 
-	for i := range g.b {
+	for i := range gm.brd {
 		bldr.Write(line)
 
-		for j := range g.b[i] {
+		for j := range gm.brd[i] {
 			bldr.WriteByte('|')
-			bldr.WriteByte(byte(g.b[i][j]))
+			bldr.WriteByte(byte(gm.brd[i][j]))
 		}
 
 		bldr.Write(barnl)
@@ -85,24 +83,24 @@ func (g *game) String() string {
 // newGame returns a game to be played.
 func newGame(m, n int, md mode) *game {
 	return &game{
-		b: newBoard(m, n),
-		s: whiteTurn,
-		m: md,
-		h: make(history, 0, 32), // TODO: Find the total number of legal states (24?)
+		brd: newBoard(m, n),
+		st:  whiteTurn,
+		md:  md,
+		hst: make(history, 0, 32), // TODO: Find the total number of legal states (24?)
 	}
 }
 
 // play
-func (g *game) play() {
+func (gm *game) play() {
 	// g.h = append(g.h, copyBoard(g.b))
 
-	for g.s == whiteTurn || g.s == blackTurn {
-		g.turn()
-		g.updateState()
+	for gm.st == whiteTurn || gm.st == blackTurn {
+		gm.turn()
+		gm.checkWin()
 		// g.h = append(g.h, copyBoard(g.b))
 	}
 
-	switch g.s {
+	switch gm.st {
 	case whiteWin:
 		fmt.Println("WHITE WINS")
 	case blackWin:
@@ -115,10 +113,10 @@ func (g *game) play() {
 }
 
 // turn
-func (g *game) turn() {
-	switch g.s {
+func (gm *game) turn() {
+	switch gm.st {
 	case whiteTurn:
-		switch g.m {
+		switch gm.md {
 		case pvp, pvc:
 			// player move
 			// return move result
@@ -127,7 +125,7 @@ func (g *game) turn() {
 			// return move result
 		}
 	case blackTurn:
-		switch g.m {
+		switch gm.md {
 		case pvp, cvp:
 			// player move
 			// return move result
@@ -139,160 +137,128 @@ func (g *game) turn() {
 }
 
 // move performs an action altering the position of the board. State is NOT altered.
-func (g *game) move(m, n int, a action) {
-	switch g.b[m][n] {
+func (gm *game) move(m, n int, a action) {
+	switch gm.brd[m][n] {
 	case whitePawn:
 		switch a {
 		case forward:
-			if 0 < m && g.b[m-1][n] == space {
-				g.b[m-1][n] = whitePawn
-				g.b[m][n] = space
+			if 0 < m && gm.brd[m-1][n] == space {
+				gm.brd[m-1][n] = whitePawn
+				gm.brd[m][n] = space
 			}
 		case captureLeft:
-			if 0 < m && 0 < n && g.b[m-1][n-1] == blackPawn {
-				g.b[m-1][n-1] = whitePawn
-				g.b[m][n] = space
+			if 0 < m && 0 < n && gm.brd[m-1][n-1] == blackPawn {
+				gm.brd[m-1][n-1] = whitePawn
+				gm.brd[m][n] = space
 			}
 		case captureRight:
-			if 0 < m && n+1 < len(g.b[0]) && g.b[m-1][n+1] == blackPawn {
-				g.b[m-1][n+1] = whitePawn
-				g.b[m][n] = space
+			if 0 < m && n+1 < len(gm.brd[0]) && gm.brd[m-1][n+1] == blackPawn {
+				gm.brd[m-1][n+1] = whitePawn
+				gm.brd[m][n] = space
 			}
 		}
 	case blackPawn:
 		switch a {
 		case forward:
-			if m+1 < len(g.b) && g.b[m][n] == space {
-				g.b[m+1][n] = blackPawn
-				g.b[m][n] = space
+			if m+1 < len(gm.brd) && gm.brd[m][n] == space {
+				gm.brd[m+1][n] = blackPawn
+				gm.brd[m][n] = space
 			}
 		case captureLeft:
-			if m+1 < len(g.b) && n+1 < len(g.b[0]) && g.b[m+1][n+1] == whitePawn {
-				g.b[m+1][n+1] = blackPawn
-				g.b[m][n] = space
+			if m+1 < len(gm.brd) && n+1 < len(gm.brd[0]) && gm.brd[m+1][n+1] == whitePawn {
+				gm.brd[m+1][n+1] = blackPawn
+				gm.brd[m][n] = space
 			}
 		case captureRight:
-			if m+1 < len(g.b) && n-1 < len(g.b[0]) && g.b[m+1][n-1] == whitePawn {
-				g.b[m+1][n-1] = blackPawn
-				g.b[m][n] = space
+			if m+1 < len(gm.brd) && n-1 < len(gm.brd[0]) && gm.brd[m+1][n-1] == whitePawn {
+				gm.brd[m+1][n-1] = blackPawn
+				gm.brd[m][n] = space
 			}
 		}
 	}
 }
 
 // availActions returns a set of actions that can be taken at a position (m,n).
-func (g *game) availActions(m, n int) []action {
-	a := make([]action, 0, 4)
-	lenB := len(g.b)
-	lenB0m1 := len(g.b[0]) - 1
+func availActions(m, n int, brd board, st state) []action {
+	acts := make([]action, 0, 4)
+	lenB := len(brd)
+	lenB0m1 := len(brd[0]) - 1
 
-	switch g.s {
+	switch st {
 	case whiteTurn:
-		if g.b[m][n] == whitePawn && 0 < m {
-			if g.b[m-1][n] == space {
-				a = append(a, forward)
+		if brd[m][n] == whitePawn && 0 < m {
+			if brd[m-1][n] == space {
+				acts = append(acts, forward)
 			}
 
 			switch n {
 			case 0:
-				if g.b[m-1][n+1] == blackPawn {
-					a = append(a, captureRight)
+				if brd[m-1][n+1] == blackPawn {
+					acts = append(acts, captureRight)
 				}
 			case lenB0m1:
-				if g.b[m-1][n-1] == blackPawn {
-					a = append(a, captureLeft)
+				if brd[m-1][n-1] == blackPawn {
+					acts = append(acts, captureLeft)
 				}
 			default:
-				if g.b[m-1][n-1] == blackPawn {
-					a = append(a, captureLeft)
+				if brd[m-1][n-1] == blackPawn {
+					acts = append(acts, captureLeft)
 				}
 
-				if g.b[m-1][n+1] == blackPawn {
-					a = append(a, captureRight)
+				if brd[m-1][n+1] == blackPawn {
+					acts = append(acts, captureRight)
 				}
 			}
 		}
 	case blackTurn:
-		if g.b[m][n] == blackPawn && m+1 < lenB {
-			if g.b[m+1][n] == space {
-				a = append(a, forward)
+		if brd[m][n] == blackPawn && m+1 < lenB {
+			if brd[m+1][n] == space {
+				acts = append(acts, forward)
 			}
 
 			switch n {
 			case 0:
-				if g.b[m+1][n+1] == whitePawn {
-					a = append(a, captureLeft)
+				if brd[m+1][n+1] == whitePawn {
+					acts = append(acts, captureLeft)
 				}
 			case lenB0m1:
-				if g.b[m+1][n-1] == whitePawn {
-					a = append(a, captureRight)
+				if brd[m+1][n-1] == whitePawn {
+					acts = append(acts, captureRight)
 				}
 			default:
-				if g.b[m+1][n-1] == whitePawn {
-					a = append(a, captureRight)
+				if brd[m+1][n-1] == whitePawn {
+					acts = append(acts, captureRight)
 				}
 
-				if g.b[m+1][n+1] == whitePawn {
-					a = append(a, captureLeft)
+				if brd[m+1][n+1] == whitePawn {
+					acts = append(acts, captureLeft)
 				}
 			}
 		}
 	}
 
-	return a
+	return acts
 }
 
-// availPawnOpts returns a set of pawn options available at a position (m,n).
-func (g *game) availPawnOpts() []*pawnOpt {
-	po := make([]*pawnOpt, 0, 4)
-	var a []action // Set of actions for each position (i,j)
-	var w weight   // Weight to apply to each action
-	var d weight   // Difference in each action weight
-	var n int      // Number of available actions
-
-	for i := range g.b {
-		for j := range g.b[i] {
-			a = g.availActions(i, j)
-			n = len(a)
-			if n == 0 {
-				continue
-			}
-
-			d = weight(1.0 / float64(n))
-			for k := range a {
-				w += d
-				po = append(po, &pawnOpt{m: i, n: j, a: a[k], p: w})
-			}
-
-			w = 0
-		}
-	}
-
-	return po
-}
-
-// TODO: rename to checkWin or something
-// updateState checks the board for a win condition and sets the game state to the winning state. If the game has not been won, then it swaps the turn
-func (g *game) updateState() {
-	switch g.s {
+// checkWin checks the board for a win condition and sets the game state to the winning state. If the game has not been won, then it swaps the turn
+func (gm *game) checkWin() {
+	switch gm.st {
 	case whiteTurn:
-		g.s = blackTurn
-		for i := range g.b[0] {
-			if g.b[0][i] == whitePawn {
-				g.s = whiteWin
+		gm.st = blackTurn
+		for i := range gm.brd[0] {
+			if gm.brd[0][i] == whitePawn {
+				gm.st = whiteWin
 				break
 			}
 		}
 	case blackTurn:
-		g.s = whiteTurn
-		n := len(g.b[0]) - 1
-		for i := range g.b[n] {
-			if g.b[n][i] == blackPawn {
-				g.s = blackWin
+		gm.st = whiteTurn
+		n := len(gm.brd[0]) - 1
+		for i := range gm.brd[n] {
+			if gm.brd[n][i] == blackPawn {
+				gm.st = blackWin
 				break
 			}
 		}
-	default:
-		g.s = illegal
 	}
 }
