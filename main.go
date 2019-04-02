@@ -10,20 +10,13 @@ type thing struct {
 type things []*thing
 
 func main() {
-	// g := newGame(3, 3, pvp)
-	// fmt.Println(g.String())
-
 	v := 1
-	x := thing{a: 1, b: &v}
-	y := &thing{a: 1, b: &v}
-	ts := things{}
-	fmt.Println(ts, x, y)
-	insert(ts, &x)
+	x := &thing{a: 1, b: &v}
+	arr := things{}
+	arr = append(arr, x)
 	x.a++
 	*x.b++
-	y.a++
-	*y.b++
-	fmt.Println(ts, x, y)
+	fmt.Println(arr[0], x)
 }
 
 func insert(ts things, t *thing) {
