@@ -1,10 +1,7 @@
 package main
 
-import "fmt"
-
 func main() {
-	a := make([]int, 0)
-	fmt.Println(a, len(a), cap(a))
+
 }
 
 func readMove(s state) (int, int, action) {

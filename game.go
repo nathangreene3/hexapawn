@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 )
 
@@ -92,24 +91,22 @@ func newGame(m, n int, md mode) *game {
 
 // play
 func (gm *game) play() {
-	// g.h = append(g.h, copyBoard(g.b))
+	// for gm.st == whiteTurn || gm.st == blackTurn {
+	// 	gm.turn()
+	// 	gm.checkWin()
+	// 	// g.h = append(g.h, copyBoard(g.b))
+	// }
 
-	for gm.st == whiteTurn || gm.st == blackTurn {
-		gm.turn()
-		gm.checkWin()
-		// g.h = append(g.h, copyBoard(g.b))
-	}
-
-	switch gm.st {
-	case whiteWin:
-		fmt.Println("WHITE WINS")
-	case blackWin:
-		fmt.Println("BLACK WINS")
-	case illegal:
-		fmt.Println("ILLEGAL STATE")
-	case stalemate:
-		fmt.Println("STALEMATE")
-	}
+	// switch gm.st {
+	// case whiteWin:
+	// 	fmt.Println("WHITE WINS")
+	// case blackWin:
+	// 	fmt.Println("BLACK WINS")
+	// case illegal:
+	// 	fmt.Println("ILLEGAL STATE")
+	// case stalemate:
+	// 	fmt.Println("STALEMATE")
+	// }
 }
 
 // turn

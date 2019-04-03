@@ -14,17 +14,19 @@ type autoPlayer []*position
 // train returns an auto player that is capable of playing hexapawn.
 func train(m, n, numGames int, t state) autoPlayer {
 	ap := make(autoPlayer, 0, 32)
+	reward := weight(0.01)
 	var (
-		gm       *game
-		poSlc    *pawnOpt
-		pawnOpts []*pawnOpt
-		psn      *position
-		choice   weight
-		sum      weight
-		index    int
+		gm         *game
+		poSlc      *pawnOpt
+		pawnOpts   []*pawnOpt
+		psn        *position
+		choice     weight
+		sumWeights weight
+		index      int
+		evnt       *event
+		punishment weight
+		apPosLen   int
 	)
-
-	lrnRt := weight(0.01)
 
 	for ; 0 < numGames; numGames-- {
 		gm = newGame(m, n, cvc)
@@ -43,15 +45,15 @@ func train(m, n, numGames int, t state) autoPlayer {
 
 					choice = weight(rand.Float64())
 					for _, po := range ap[index].pos {
-						if choice <= po.w {
+						sumWeights += po.wght
+						if choice <= sumWeights {
 							gm.move(po.m, po.n, po.act)
+							evnt = &event{psn: psn, poSlc: copyPawnOpt(po)}
 							break
 						}
-
-						sum += po.w
 					}
 
-					sum = 0.0
+					sumWeights = 0.0
 				case blackTurn:
 					pawnOpts = availPawnOpts(gm.brd, gm.st)
 					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
@@ -73,15 +75,15 @@ func train(m, n, numGames int, t state) autoPlayer {
 
 					choice = weight(rand.Float64())
 					for _, po := range ap[index].pos {
-						if choice <= po.w {
+						sumWeights += po.wght
+						if choice <= sumWeights {
 							gm.move(po.m, po.n, po.act)
+							evnt = &event{psn: psn, poSlc: copyPawnOpt(po)}
 							break
 						}
-
-						sum += po.w
 					}
 
-					sum = 0.0
+					sumWeights = 0.0
 				default:
 					log.Fatal("turn: invalid state entered")
 				}
@@ -89,24 +91,114 @@ func train(m, n, numGames int, t state) autoPlayer {
 				switch t {
 				case whiteTurn:
 					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.brd, hstpsn.st)
-						for _, appo := range ap[index].pos {
-							//
+						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						apPosLen = len(ap[index].pos)
+						switch apPosLen {
+						case 0:
+							log.Fatal("train: cannot train on zero pawn options")
+						case 1:
+							continue // Only one pawn option to select
+						default:
+							punishment = reward / weight(apPosLen-1)
+							for i, appo := range ap[index].pos {
+								if appo.act == hstpsn.poSlc.act {
+									ap[index].pos[i].wght += reward
+									continue
+								}
+
+								ap[index].pos[i].wght -= punishment
+							}
 						}
 					}
 				case blackTurn:
+					for _, hstpsn := range gm.hst {
+						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						apPosLen = len(ap[index].pos)
+						switch apPosLen {
+						case 0:
+							log.Fatal("train: cannot train on zero pawn options")
+						case 1:
+							continue // Only one pawn option to select
+						default:
+							punishment = reward / weight(apPosLen-1)
+							for i, appo := range ap[index].pos {
+								if appo.act == hstpsn.poSlc.act {
+									ap[index].pos[i].wght -= reward
+									continue
+								}
+
+								ap[index].pos[i].wght += punishment
+							}
+						}
+					}
 				}
 				break
 			case blackWin:
 				switch t {
 				case whiteTurn:
+					for _, hstpsn := range gm.hst {
+						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						apPosLen = len(ap[index].pos)
+						switch apPosLen {
+						case 0:
+							log.Fatal("train: cannot train on zero pawn options")
+						case 1:
+							continue // Only one pawn option to select
+						default:
+							punishment = reward / weight(apPosLen-1)
+							for i, appo := range ap[index].pos {
+								if appo.act == hstpsn.poSlc.act {
+									ap[index].pos[i].wght -= reward
+									continue
+								}
+
+								ap[index].pos[i].wght += punishment
+							}
+						}
+					}
 				case blackTurn:
+					for _, hstpsn := range gm.hst {
+						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						apPosLen = len(ap[index].pos)
+						switch apPosLen {
+						case 0:
+							log.Fatal("train: cannot train on zero pawn options")
+						case 1:
+							continue // Only one pawn option to select
+						default:
+							punishment = reward / weight(apPosLen-1)
+							for i, appo := range ap[index].pos {
+								if appo.act == hstpsn.poSlc.act {
+									ap[index].pos[i].wght += reward
+									continue
+								}
+
+								ap[index].pos[i].wght -= punishment
+							}
+						}
+					}
 				}
 				break
 			case stalemate:
-				switch t {
-				case whiteTurn:
-				case blackTurn:
+				for _, hstpsn := range gm.hst {
+					index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+					apPosLen = len(ap[index].pos)
+					switch apPosLen {
+					case 0:
+						log.Fatal("train: cannot train on zero pawn options")
+					case 1:
+						continue // Only one pawn option to select
+					default:
+						punishment = reward / weight(apPosLen-1)
+						for i, appo := range ap[index].pos {
+							if appo.act == hstpsn.poSlc.act {
+								ap[index].pos[i].wght -= reward
+								continue
+							}
+
+							ap[index].pos[i].wght += punishment
+						}
+					}
 				}
 				break
 			case illegal:
@@ -117,8 +209,8 @@ func train(m, n, numGames int, t state) autoPlayer {
 				break
 			}
 
+			gm.hst = append(gm.hst, evnt)
 			gm.checkWin()
-			gm.hst = append(gm.hst, psn)
 		}
 	}
 
@@ -128,7 +220,7 @@ func train(m, n, numGames int, t state) autoPlayer {
 // insert a position into an auto player and returns the position it is found in after sorting.
 func (ap autoPlayer) insert(brd board, st state) int {
 	ap = append(ap, &position{brd: copyBoard(brd), st: st, pos: availPawnOpts(brd, st)})
-	sort.Sort(ap)
+	sort.Slice(ap, ap.less)
 	return ap.index(brd, st)
 }
 
@@ -147,7 +239,7 @@ func (ap autoPlayer) index(brd board, st state) int {
 
 // Less returns true if each less-than pawn comparison in two boards is true and
 // false if otherwise.
-func (ap autoPlayer) Less(i, j int) bool {
+func (ap autoPlayer) less(i, j int) bool {
 	for a := range ap[i].brd {
 		for b := range ap[i].brd[a] {
 			if ap[j].brd[a][b] < ap[i].brd[a][b] {
@@ -157,16 +249,4 @@ func (ap autoPlayer) Less(i, j int) bool {
 	}
 
 	return true
-}
-
-// Len returns the length of the auto player.
-func (ap autoPlayer) Len() int {
-	return len(ap)
-}
-
-// Swap two pawn options in an auto player.
-func (ap autoPlayer) Swap(i, j int) {
-	temp := ap[i]
-	ap[i] = ap[j]
-	ap[j] = temp
 }

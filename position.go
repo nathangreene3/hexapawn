@@ -1,7 +1,12 @@
 package main
 
 // history is a set of positions that occur in a single game.
-type history []*position
+type history []*event
+
+type event struct {
+	psn   *position
+	poSlc *pawnOpt
+}
 
 // position joins a board, state, and a set of available pawn options with a pawn option selection.
 type position struct {
@@ -39,3 +44,8 @@ func equalPositions(psn0, psn1 *position) bool {
 		return true
 	}
 }
+
+// func (evnt *event)String()string{
+// 	bldr:=strings.Builder{}
+
+// }

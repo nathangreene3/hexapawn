@@ -11,20 +11,20 @@ type pawnOpts []*pawnOpt
 
 // pawnOpt is an available action at a position (m,n) with a probability weight of being selected.
 type pawnOpt struct {
-	m   int    // Row index in board
-	n   int    // Column index in board
-	act action // Available action
-	w   weight // TODO: redefine this field to something more appropriate
+	m    int    // Row index in board
+	n    int    // Column index in board
+	act  action // Available action
+	wght weight // TODO: redefine this field to something more appropriate
 }
 
 // insert a pawn option into a set. The pawn option will be copied.
 func (pos pawnOpts) insert(po *pawnOpt) {
 	switch len(pos) {
 	case 0:
-		pos = append(pos, po)
+		pos = append(pos, copyPawnOpt(po))
 	case pos.index(po):
-		pos = append(pos, po)
-		sort.Sort(pos)
+		pos = append(pos, copyPawnOpt(po))
+		sort.Slice(pos, pos.less)
 	}
 }
 
@@ -36,26 +36,24 @@ func (pos pawnOpts) index(po *pawnOpt) int {
 // availPawnOpts returns a set of pawn options available at a position (m,n).
 func availPawnOpts(brd board, st state) []*pawnOpt {
 	po := make([]*pawnOpt, 0, 4)
-	var a []action // Set of actions for each position (i,j)
-	var w weight   // Weight to apply to each action
-	var d weight   // Difference in each action weight
-	var n int      // Number of available actions
+	var (
+		acts    []action // Set of actions for each position (i,j)
+		wght    weight   // Weight to apply to each action
+		actsLen int      // Number of available actions
+	)
 
 	for i := range brd {
 		for j := range brd[i] {
-			a = availActions(i, j, brd, st)
-			n = len(a)
-			if n == 0 {
+			acts = availActions(i, j, brd, st)
+			actsLen = len(acts)
+			if actsLen == 0 {
 				continue
 			}
 
-			d = weight(1.0 / float64(n))
-			for k := range a {
-				w += d
-				po = append(po, &pawnOpt{m: i, n: j, act: a[k], w: w})
+			wght = 1.0 / weight(actsLen)
+			for k := range acts {
+				po = append(po, &pawnOpt{m: i, n: j, act: acts[k], wght: wght})
 			}
-
-			w = 0
 		}
 	}
 
@@ -75,7 +73,7 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 		return false
 	case po0.act != po1.act:
 		return false
-	case po0.w != po1.w:
+	case po0.wght != po1.wght:
 		return false
 	default:
 		return true
@@ -83,22 +81,10 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 }
 
 func copyPawnOpt(po *pawnOpt) *pawnOpt {
-	return &pawnOpt{m: po.m, n: po.n, act: po.act, w: po.w}
+	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
 }
 
-// Len returns the length of a set of pawn options.
-func (pos pawnOpts) Len() int {
-	return len(pos)
-}
-
-// Less compares the weight field of two pawn options in a set.
-func (pos pawnOpts) Less(i, j int) bool {
-	return pos[i].w < pos[j].w
-}
-
-// Swap two pawn options in a set.
-func (pos pawnOpts) Swap(i, j int) {
-	temp := pos[i]
-	pos[i] = pos[j]
-	pos[j] = temp
+// less compares the weight field of two pawn options in a set.
+func (pos pawnOpts) less(i, j int) bool {
+	return pos[i].wght < pos[j].wght
 }
