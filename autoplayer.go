@@ -9,11 +9,18 @@ import (
 // autoPlayer is a set of positions that can be trained. The pawn option selection
 // will be set for each field to indicate the optimal pawn option and the set of
 // pawn options will be optimized and ranked.
-type autoPlayer []*position
+type autoPlayer struct {
+	sd   side
+	psns []*position
+}
 
 // train returns an auto player that is capable of playing hexapawn.
-func train(m, n, numGames int, t state) *autoPlayer {
-	ap := make(autoPlayer, 0, 32)
+func train(m, n, numGames int, sd side) *autoPlayer {
+	if sd != whiteSide && sd != blackSide {
+		panic("train: side must be white or black")
+	}
+
+	ap := &autoPlayer{sd: sd, psns: make([]*position, 0, 32)}
 	reward := weight(0.01)
 	var (
 		gm         *game
@@ -34,11 +41,11 @@ func train(m, n, numGames int, t state) *autoPlayer {
 			psn = &position{brd: gm.brd, st: gm.st, pos: availPawnOpts(gm.brd, gm.st)}
 			switch gm.st {
 			case whiteTurn:
-				switch t {
-				case whiteTurn:
+				switch sd {
+				case whiteSide:
 					evnt = ap.move(psn)
 					gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
-				case blackTurn:
+				case blackSide:
 					pawnOpts = availPawnOpts(gm.brd, gm.st)
 					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
 					gm.move(poSlc.m, poSlc.n, poSlc.act)
@@ -46,23 +53,23 @@ func train(m, n, numGames int, t state) *autoPlayer {
 					log.Fatal("turn: invalid state entered")
 				}
 			case blackTurn:
-				switch t {
-				case whiteTurn:
+				switch sd {
+				case whiteSide:
 					pawnOpts = availPawnOpts(gm.brd, gm.st)
 					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
 					gm.move(poSlc.m, poSlc.n, poSlc.act)
-				case blackTurn:
+				case blackSide:
 					evnt = ap.move(psn)
 					gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
 				default:
-					log.Fatal("turn: invalid state entered")
+					panic("turn: invalid state entered")
 				}
 			case whiteWin:
-				switch t {
-				case whiteTurn:
+				switch sd {
+				case whiteSide:
 					for _, hstpsn := range gm.hst {
-						index = (&ap).index(hstpsn.psn.brd, hstpsn.psn.st)
-						if index == len(ap) {
+						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						if index == len(ap.psns) {
 							continue
 						}
 
@@ -193,14 +200,14 @@ func train(m, n, numGames int, t state) *autoPlayer {
 
 func (ap *autoPlayer) move(psn *position) *event {
 	index := ap.index(psn.brd, psn.st)
-	if index == len(*ap) {
+	if index == len(ap.psns) {
 		index = ap.insert(psn.brd, psn.st)
 	}
 
 	choice := weight(rand.Float64())
 	var sum weight
-	// fmt.Println(index, ap, len(ap))
-	for _, po := range (*ap)[index].pos {
+	// fmt.Println(index, ap, len(ap.psns))
+	for _, po := range ap.psns[index].pos {
 		sum += po.wght
 		if choice <= sum {
 			return &event{psn: copyPosition(psn), poSlc: copyPawnOpt(po)}
@@ -219,23 +226,23 @@ func (ap *autoPlayer) insert(brd board, st state) int {
 
 // remove a position from an auto player's experience.
 func (ap *autoPlayer) remove(i int) *position {
-	psn := (*ap)[i]
-	*ap = append((*ap)[:i], (*ap)[i+1:]...)
+	psn := ap.psns[i]
+	*ap = append(ap.psns[:i], ap.psns[i+1:]...)
 	return psn
 }
 
 // index returns the index a position is found in an auto player. If the position
-// is not found, len(ap) is returned.
+// is not found, len(ap.psns) is returned.
 func (ap *autoPlayer) index(brd board, st state) int {
-	return sort.Search(len(*ap), func(i int) bool { return equalBoards((*ap)[i].brd, brd) && (*ap)[i].st == st })
+	return sort.Search(len(ap.psns), func(i int) bool { return equalBoards(ap.psns[i].brd, brd) && ap.psns[i].st == st })
 }
 
 // Less returns true if each less-than pawn comparison in two boards is true and
 // false if otherwise.
 func (ap *autoPlayer) less(i, j int) bool {
-	for a := range (*ap)[i].brd {
-		for b := range (*ap)[i].brd[a] {
-			if (*ap)[j].brd[a][b] < (*ap)[i].brd[a][b] {
+	for a := range ap.psns[i].brd {
+		for b := range ap.psns[i].brd[a] {
+			if ap.psns[j].brd[a][b] < ap.psns[i].brd[a][b] {
 				return false
 			}
 		}
