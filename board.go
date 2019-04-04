@@ -3,7 +3,8 @@ package main
 // board is an m-by-n array of pieces.
 type board [][]pawn
 
-// newBoard returns a new board with black on top, white on bottom. Panics if m or n are less than three.
+// newBoard returns a new board with black on top, white on bottom. Panics if m or
+// n are less than three.
 func newBoard(m, n int) board {
 	if m < 3 || n < 3 {
 		panic("newBoard: diminsions cannot be less than three")
@@ -34,19 +35,21 @@ func newBoard(m, n int) board {
 	return brd
 }
 
-func copyBoard(b board) board {
-	c := make(board, 0, len(b))
-	n := len(b[0])
+// copyBoard returns a new copy of a board.
+func copyBoard(brd board) board {
+	cpy := make(board, 0, len(brd))
+	n := len(brd[0])
 
-	for i := range b {
-		c = append(c, make([]pawn, n))
-		copy(c[i], b[i])
+	for i := range brd {
+		cpy = append(cpy, make([]pawn, n))
+		copy(cpy[i], brd[i])
 	}
 
-	return c
+	return cpy
 }
 
-// equalBoards returns true if two boards are equal in dimension and position and false if otherwise.
+// equalBoards returns true if two boards are equal in dimension and position and
+// false if otherwise.
 func equalBoards(brd0, brd1 board) bool {
 	m := len(brd0)
 	if m != len(brd1) {
@@ -69,7 +72,8 @@ func equalBoards(brd0, brd1 board) bool {
 	return true
 }
 
-// symmetricEqualBoards returns true if two boards are equal reflection across the vertical axis and false if otherwise. That is, b == reflect(c) is returned.
+// symmetricEqualBoards returns true if two boards are equal reflection across the
+// vertical axis and false if otherwise. That is, b == reflect(c) is returned.
 func symmetricEqualBoards(brd0, brd1 board) bool {
 	m := len(brd0)
 	if m != len(brd1) {

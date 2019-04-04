@@ -1,7 +1,7 @@
 package main
 
 func main() {
-
+	play(3, 3, cvc)
 }
 
 func readMove(s state) (int, int, action) {

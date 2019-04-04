@@ -9,26 +9,32 @@ type weight float64
 // pawnOpts is a set of pawn options.
 type pawnOpts []*pawnOpt
 
-// pawnOpt is an available action at a position (m,n) with a probability weight of being selected.
+// pawnOpt is an available action at a position (m,n) with a probability weight of
+// being selected.
 type pawnOpt struct {
 	m    int    // Row index in board
 	n    int    // Column index in board
 	act  action // Available action
-	wght weight // TODO: redefine this field to something more appropriate
+	wght weight // Probability of selecting action
 }
 
 // insert a pawn option into a set. The pawn option will be copied.
-func (pos pawnOpts) insert(po *pawnOpt) {
+func (pos pawnOpts) insert(po *pawnOpt) int {
 	switch len(pos) {
 	case 0:
 		pos = append(pos, copyPawnOpt(po))
+		return 0
 	case pos.index(po):
 		pos = append(pos, copyPawnOpt(po))
 		sort.Slice(pos, pos.less)
+		return pos.index(po)
+	default:
+		return pos.index(po)
 	}
 }
 
-// index returns the index a pawn option is found in a set of pawn options. If the pawn option is not found, len(pos) is returned.
+// index returns the index a pawn option is found in a set of pawn options. If the
+// pawn option is not found, len(pos) is returned.
 func (pos pawnOpts) index(po *pawnOpt) int {
 	return sort.Search(len(pos), func(i int) bool { return equalPawnOpts(pos[i], po) })
 }
@@ -80,6 +86,7 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	}
 }
 
+// copyPawnOpt returns a copy of a pawn option.
 func copyPawnOpt(po *pawnOpt) *pawnOpt {
 	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
 }

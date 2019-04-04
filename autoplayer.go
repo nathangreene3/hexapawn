@@ -12,7 +12,7 @@ import (
 type autoPlayer []*position
 
 // train returns an auto player that is capable of playing hexapawn.
-func train(m, n, numGames int, t state) autoPlayer {
+func train(m, n, numGames int, t state) *autoPlayer {
 	ap := make(autoPlayer, 0, 32)
 	reward := weight(0.01)
 	var (
@@ -20,8 +20,6 @@ func train(m, n, numGames int, t state) autoPlayer {
 		poSlc      *pawnOpt
 		pawnOpts   []*pawnOpt
 		psn        *position
-		choice     weight
-		sumWeights weight
 		index      int
 		evnt       *event
 		punishment weight
@@ -38,22 +36,8 @@ func train(m, n, numGames int, t state) autoPlayer {
 			case whiteTurn:
 				switch t {
 				case whiteTurn:
-					index = ap.index(gm.brd, gm.st)
-					if index == len(ap) {
-						index = ap.insert(gm.brd, gm.st)
-					}
-
-					choice = weight(rand.Float64())
-					for _, po := range ap[index].pos {
-						sumWeights += po.wght
-						if choice <= sumWeights {
-							gm.move(po.m, po.n, po.act)
-							evnt = &event{psn: psn, poSlc: copyPawnOpt(po)}
-							break
-						}
-					}
-
-					sumWeights = 0.0
+					evnt = ap.move(psn)
+					gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
 				case blackTurn:
 					pawnOpts = availPawnOpts(gm.brd, gm.st)
 					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
@@ -68,22 +52,8 @@ func train(m, n, numGames int, t state) autoPlayer {
 					poSlc = pawnOpts[rand.Intn(len(pawnOpts))]
 					gm.move(poSlc.m, poSlc.n, poSlc.act)
 				case blackTurn:
-					index = ap.index(gm.brd, gm.st)
-					if index == len(ap) {
-						index = ap.insert(gm.brd, gm.st)
-					}
-
-					choice = weight(rand.Float64())
-					for _, po := range ap[index].pos {
-						sumWeights += po.wght
-						if choice <= sumWeights {
-							gm.move(po.m, po.n, po.act)
-							evnt = &event{psn: psn, poSlc: copyPawnOpt(po)}
-							break
-						}
-					}
-
-					sumWeights = 0.0
+					evnt = ap.move(psn)
+					gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
 				default:
 					log.Fatal("turn: invalid state entered")
 				}
@@ -91,7 +61,11 @@ func train(m, n, numGames int, t state) autoPlayer {
 				switch t {
 				case whiteTurn:
 					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.psn.brd, hstpsn.psn.st)
+						index = (&ap).index(hstpsn.psn.brd, hstpsn.psn.st)
+						if index == len(ap) {
+							continue
+						}
+
 						apPosLen = len(ap[index].pos)
 						switch apPosLen {
 						case 0:
@@ -214,35 +188,54 @@ func train(m, n, numGames int, t state) autoPlayer {
 		}
 	}
 
-	return ap
+	return &ap
+}
+
+func (ap *autoPlayer) move(psn *position) *event {
+	index := ap.index(psn.brd, psn.st)
+	if index == len(*ap) {
+		index = ap.insert(psn.brd, psn.st)
+	}
+
+	choice := weight(rand.Float64())
+	var sum weight
+	// fmt.Println(index, ap, len(ap))
+	for _, po := range (*ap)[index].pos {
+		sum += po.wght
+		if choice <= sum {
+			return &event{psn: copyPosition(psn), poSlc: copyPawnOpt(po)}
+		}
+	}
+
+	return &event{psn: copyPosition(psn)}
 }
 
 // insert a position into an auto player and returns the position it is found in after sorting.
-func (ap autoPlayer) insert(brd board, st state) int {
-	ap = append(ap, &position{brd: copyBoard(brd), st: st, pos: availPawnOpts(brd, st)})
-	sort.Slice(ap, ap.less)
+func (ap *autoPlayer) insert(brd board, st state) int {
+	*ap = append(*ap, &position{brd: copyBoard(brd), st: st, pos: availPawnOpts(brd, st)})
+	sort.Slice(*ap, ap.less)
 	return ap.index(brd, st)
 }
 
 // remove a position from an auto player's experience.
-func (ap autoPlayer) remove(i int) *position {
-	psn := ap[i]
-	ap = append(ap[:i], ap[i+1:]...)
+func (ap *autoPlayer) remove(i int) *position {
+	psn := (*ap)[i]
+	*ap = append((*ap)[:i], (*ap)[i+1:]...)
 	return psn
 }
 
 // index returns the index a position is found in an auto player. If the position
 // is not found, len(ap) is returned.
-func (ap autoPlayer) index(brd board, st state) int {
-	return sort.Search(len(ap), func(i int) bool { return equalBoards(ap[i].brd, brd) && ap[i].st == st })
+func (ap *autoPlayer) index(brd board, st state) int {
+	return sort.Search(len(*ap), func(i int) bool { return equalBoards((*ap)[i].brd, brd) && (*ap)[i].st == st })
 }
 
 // Less returns true if each less-than pawn comparison in two boards is true and
 // false if otherwise.
-func (ap autoPlayer) less(i, j int) bool {
-	for a := range ap[i].brd {
-		for b := range ap[i].brd[a] {
-			if ap[j].brd[a][b] < ap[i].brd[a][b] {
+func (ap *autoPlayer) less(i, j int) bool {
+	for a := range (*ap)[i].brd {
+		for b := range (*ap)[i].brd[a] {
+			if (*ap)[j].brd[a][b] < (*ap)[i].brd[a][b] {
 				return false
 			}
 		}
