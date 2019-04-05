@@ -103,36 +103,28 @@ func newGame(m, n int, md mode) *game {
 func play(m, n int, md mode) {
 	gm := newGame(m, n, md)
 
-	var (
-		psn  *position
-		evnt *event
-	)
+	var psn *position
 
-	// -|-----|--|---|-
-	//  0     w0 w1  w2=1
 	switch md {
 	case cvc:
-		white := train(m, n, 10, whiteTurn)
-		black := train(m, n, 10, blackTurn)
+		white := newAutoPlayer(whiteSide)
+		black := newAutoPlayer(blackSide)
+		white.train(m, n, 10)
+		black.train(m, n, 10)
+		var gameOver bool
 
-		for {
+		for !gameOver {
 			psn = &position{brd: gm.brd, st: gm.st, pos: availPawnOpts(gm.brd, gm.st)}
-			fmt.Println(gm.String())
-			fmt.Printf("%b turn", byte(gm.st))
+			fmt.Printf("%s\n\n", gm.String())
 
 			switch gm.st {
 			case whiteTurn:
-				evnt = white.move(psn)
-				gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
+				gm.move(white.move(psn))
 			case blackTurn:
-				evnt = black.move(psn)
-				gm.move(evnt.poSlc.m, evnt.poSlc.n, evnt.poSlc.act)
+				gm.move(black.move(psn))
 			default:
-				break
+				gameOver = true
 			}
-
-			gm.hst = append(gm.hst, evnt)
-			gm.checkWin()
 		}
 	case cvp: // TODO
 	case pvc: // TODO
@@ -177,47 +169,69 @@ func (gm *game) turn() {
 	}
 }
 
-// move performs an action altering the position of the board. The game state is
-// NOT altered.
-func (gm *game) move(m, n int, a action) {
-	switch gm.brd[m][n] {
-	case whitePawn:
-		switch a {
-		case forward:
-			if 0 < m && gm.brd[m-1][n] == space {
-				gm.brd[m-1][n] = whitePawn
-				gm.brd[m][n] = space
+// move performs an action altering the position of the board.
+func (gm *game) move(evnt *event) {
+	if evnt.poSlc != nil {
+		m, n := evnt.poSlc.m, evnt.poSlc.n
+		act := evnt.poSlc.act
+
+		switch gm.brd[m][n] {
+		case whitePawn:
+			switch act {
+			case forward:
+				if 0 < m && gm.brd[m-1][n] == space {
+					gm.brd[m-1][n] = whitePawn
+					gm.brd[m][n] = space
+				}
+			case captureLeft:
+				if 0 < m && 0 < n && gm.brd[m-1][n-1] == blackPawn {
+					gm.brd[m-1][n-1] = whitePawn
+					gm.brd[m][n] = space
+				}
+			case captureRight:
+				if 0 < m && n+1 < len(gm.brd[0]) && gm.brd[m-1][n+1] == blackPawn {
+					gm.brd[m-1][n+1] = whitePawn
+					gm.brd[m][n] = space
+				}
 			}
-		case captureLeft:
-			if 0 < m && 0 < n && gm.brd[m-1][n-1] == blackPawn {
-				gm.brd[m-1][n-1] = whitePawn
-				gm.brd[m][n] = space
+
+			if checkWin(gm.brd, gm.st) {
+				gm.st = whiteWin
+			} else {
+				gm.st = blackTurn
 			}
-		case captureRight:
-			if 0 < m && n+1 < len(gm.brd[0]) && gm.brd[m-1][n+1] == blackPawn {
-				gm.brd[m-1][n+1] = whitePawn
-				gm.brd[m][n] = space
+		case blackPawn:
+			switch act {
+			case forward:
+				if m+1 < len(gm.brd) && gm.brd[m][n] == space {
+					gm.brd[m+1][n] = blackPawn
+					gm.brd[m][n] = space
+				}
+			case captureLeft:
+				if m+1 < len(gm.brd) && n+1 < len(gm.brd[0]) && gm.brd[m+1][n+1] == whitePawn {
+					gm.brd[m+1][n+1] = blackPawn
+					gm.brd[m][n] = space
+				}
+			case captureRight:
+				if m+1 < len(gm.brd) && n-1 < len(gm.brd[0]) && gm.brd[m+1][n-1] == whitePawn {
+					gm.brd[m+1][n-1] = blackPawn
+					gm.brd[m][n] = space
+				}
 			}
+
+			if checkWin(gm.brd, gm.st) {
+				gm.st = blackWin
+			} else {
+				gm.st = whiteTurn
+			}
+		default:
+			panic("move: cannot move space")
 		}
-	case blackPawn:
-		switch a {
-		case forward:
-			if m+1 < len(gm.brd) && gm.brd[m][n] == space {
-				gm.brd[m+1][n] = blackPawn
-				gm.brd[m][n] = space
-			}
-		case captureLeft:
-			if m+1 < len(gm.brd) && n+1 < len(gm.brd[0]) && gm.brd[m+1][n+1] == whitePawn {
-				gm.brd[m+1][n+1] = blackPawn
-				gm.brd[m][n] = space
-			}
-		case captureRight:
-			if m+1 < len(gm.brd) && n-1 < len(gm.brd[0]) && gm.brd[m+1][n-1] == whitePawn {
-				gm.brd[m+1][n-1] = blackPawn
-				gm.brd[m][n] = space
-			}
-		}
+	} else {
+		gm.st = stalemate
 	}
+
+	gm.hst = append(gm.hst, evnt)
 }
 
 // availActions returns a set of actions that can be taken at a position (m,n).
@@ -283,27 +297,56 @@ func availActions(m, n int, brd board, st state) []action {
 	return acts
 }
 
-// checkWin checks the board for a win condition and sets the game state to the
-// winning state. If the game has not been won, then it swaps the turn. All other
-// game states are unaltered.
-func (gm *game) checkWin() {
-	switch gm.st {
+// checkWin checks the board for a win condition given a state. If the state is
+// neither white nor black turn, then false is returned.
+func checkWin(brd board, st state) bool {
+	var count int
+	switch st {
 	case whiteTurn:
-		gm.st = blackTurn
-		for i := range gm.brd[0] {
-			if gm.brd[0][i] == whitePawn {
-				gm.st = whiteWin
-				break
+		for i := range brd[0] {
+			if brd[0][i] == whitePawn {
+				return true
+			}
+
+			count++
+		}
+		for i := 0; i < len(brd)-1; i++ {
+			for _, p := range brd[i] {
+				if p == blackPawn {
+					count++
+				}
 			}
 		}
+
+		if count == 0 {
+			return true // No pieces left for black to move
+		}
+
+		return false
 	case blackTurn:
-		gm.st = whiteTurn
-		n := len(gm.brd[0]) - 1
-		for i := range gm.brd[n] {
-			if gm.brd[n][i] == blackPawn {
-				gm.st = blackWin
-				break
+		n := len(brd[0]) - 1
+		for i := range brd[n] {
+			if brd[n][i] == blackPawn {
+				return true
+			}
+
+			count++
+		}
+
+		for i := 1; i < len(brd); i++ {
+			for _, p := range brd[i] {
+				if p == whitePawn {
+					count++
+				}
 			}
 		}
+
+		if count == 0 {
+			return true // No pieces left for white to move
+		}
+
+		return false
+	default:
+		return false
 	}
 }
