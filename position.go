@@ -1,11 +1,34 @@
 package main
 
+import (
+	"bytes"
+)
+
 // position joins a board, state, and a set of available pawn options with a pawn
 // option selection.
 type position struct {
 	brd board    // Board position
 	st  state    // State of the game
 	pos pawnOpts // Available pawn options
+}
+
+func (psn *position) String() string {
+	return string(psn.toBytes())
+}
+
+func (psn *position) toBytes() []byte {
+	buf := bytes.Buffer{}
+
+	buf.Write(psn.brd.toBytes())
+	buf.Write([]byte{'\n', byte(psn.st)})
+
+	for i := range psn.pos {
+		buf.WriteString(psn.pos[i].String())
+	}
+
+	buf.WriteByte('\n')
+
+	return buf.Bytes()
 }
 
 // copyPosition returns a copy of a postion.

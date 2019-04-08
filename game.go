@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"strings"
@@ -62,29 +61,29 @@ const (
 	stalemate
 )
 
-// String returns a string representing a game.
+// String returns a string representing the current state of a game.
 func (gm *game) String() string {
 	n := len(gm.brd[0])
 	bldr := strings.Builder{}
-	bldr.Grow((2*len(gm.brd) + 1) * (2*n + 1))
+	bldr.Grow((2*len(gm.brd)+1)*(2*n+1) + 32)
 
-	dashPlus := []byte{'-', '+'}
-	barnl := []byte{'|', '\n'}
-	line := bytes.Join([][]byte{[]byte{'+'}, bytes.Repeat(dashPlus, n), []byte{'\n'}}, []byte{})
-
-	for i := range gm.brd {
-		bldr.Write(line)
-
-		for j := range gm.brd[i] {
-			bldr.WriteByte('|')
-			bldr.WriteByte(byte(gm.brd[i][j]))
-		}
-
-		bldr.Write(barnl)
+	bldr.Write(gm.brd.toBytes())
+	switch gm.st {
+	case whiteTurn:
+		bldr.Write([]byte("\nwhite to move\n"))
+	case blackTurn:
+		bldr.Write([]byte("\nblack to move\n"))
+	case whiteWin:
+		bldr.Write([]byte("\nwhite wins\n"))
+	case blackWin:
+		bldr.Write([]byte("\nblack wins\n"))
+	case stalemate:
+		bldr.Write([]byte("\nstalemate\n"))
+	case illegal:
+		bldr.Write([]byte("\nillegal position\n"))
+	default:
+		bldr.Write([]byte("\nunknown state\n"))
 	}
-
-	bldr.WriteByte('+')
-	bldr.Write(bytes.Repeat(dashPlus, n))
 
 	return bldr.String()
 }
@@ -146,6 +145,67 @@ func play(m, n int, md mode) {
 	case stalemate:
 		fmt.Println("STALEMATE")
 	}
+}
+
+func playNGames(numGames, m, n int, md mode) string {
+	var (
+		gm            *game
+		psn           *position
+		trainSessions = 100000
+		whiteWins     int
+		blackWins     int
+		stalemates    int
+	)
+
+	switch md {
+	case cvc:
+		white := newAutoPlayer(whiteSide)
+		black := newAutoPlayer(blackSide)
+		white.train(m, n, trainSessions)
+		black.train(m, n, trainSessions)
+
+		for ; 0 < numGames; numGames-- {
+			gm = newGame(m, n, md)
+			for {
+				psn = &position{
+					brd: gm.brd,
+					st:  gm.st,
+					pos: availPawnOpts(gm.brd, gm.st),
+				}
+
+				if gm.st == whiteTurn {
+					gm.move(white.move(psn))
+					continue
+				}
+
+				if gm.st == blackTurn {
+					gm.move(black.move(psn))
+					continue
+				}
+
+				break
+			}
+
+			switch gm.st {
+			case whiteWin:
+				whiteWins++
+			case blackWin:
+				blackWins++
+			case stalemate:
+				stalemates++
+			default:
+				log.Fatal("playNGames: invalid endgame state")
+			}
+		}
+		fmt.Println(white.String())
+	case cvp: // TODO
+	case pvc: // TODO
+	case pvp: // TODO
+	default:
+		log.Fatal("playNGames: invalid mode")
+	}
+
+	return fmt.Sprintf("white wins:  %d\nblack wins:  %d\nstalemates:  %d\n--------------\n     total: %d", whiteWins, blackWins, stalemates, whiteWins+blackWins+stalemates)
 }
 
 // turn

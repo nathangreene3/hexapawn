@@ -1,15 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 )
 
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	for i := 0; i < 10; i++ {
-		play(3, 3, cvc)
-	}
+	fmt.Println(playNGames(10, 3, 3, cvc))
 }
 
 func readMove(s state) (int, int, action) {

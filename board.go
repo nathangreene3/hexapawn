@@ -1,7 +1,41 @@
 package main
 
+import (
+	"bytes"
+)
+
 // board is an m-by-n array of pieces.
 type board [][]pawn
+
+func (brd board) String() string {
+	return string(brd.toBytes())
+}
+
+func (brd board) toBytes() []byte {
+	n := len(brd[0])
+	buf := bytes.Buffer{}
+	buf.Grow((2*len(brd) + 1) * (2*n + 1))
+
+	dashPlus := []byte{'-', '+'}
+	barnl := []byte{'|', '\n'}
+	line := bytes.Join([][]byte{[]byte{'+'}, bytes.Repeat(dashPlus, n), []byte{'\n'}}, []byte{})
+
+	for i := range brd {
+		buf.Write(line)
+
+		for j := range brd[i] {
+			buf.WriteByte('|')
+			buf.WriteByte(byte(brd[i][j]))
+		}
+
+		buf.Write(barnl)
+	}
+
+	buf.WriteByte('+')
+	buf.Write(bytes.Repeat(dashPlus, n))
+
+	return buf.Bytes()
+}
 
 // newBoard returns a new board with black on top, white on bottom. Panics if m or
 // n are less than three.

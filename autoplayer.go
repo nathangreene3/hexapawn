@@ -4,6 +4,7 @@ import (
 	"log"
 	"math/rand"
 	"sort"
+	"strings"
 )
 
 // Action weights are effectively the space between decision boundaries. To select
@@ -21,14 +22,16 @@ type autoPlayer struct {
 	psns []*position // Set of positions experienced
 }
 
-// type (ap *autoPlayer)String()string{
-// 	bldr:=strings.Builder{}
-// 	for i:=range ap.psns{
-// 		bldr.WriteString(ap.psns.String())
-// 	}
+func (ap *autoPlayer) String() string {
+	bldr := strings.Builder{}
 
-// 	return bldr.String()
-// }
+	bldr.Write([]byte{byte(ap.sd), '\n'})
+	for i := range ap.psns {
+		bldr.WriteString(ap.psns[i].String())
+	}
+
+	return bldr.String()
+}
 
 // newAutoPlayer returns an autoPlayer associated with a side.
 func newAutoPlayer(sd side) *autoPlayer {
@@ -94,7 +97,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 
 						punishment = reward / weight(apPosLen-1)
 						for i, appo := range ap.psns[index].pos {
-							if appo.act == hstpsn.poSlc.act {
+							if equalPawnOpts(appo, hstpsn.poSlc) {
 								ap.psns[index].pos[i].wght += reward
 								continue
 							}
@@ -116,7 +119,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 
 						punishment = reward / weight(apPosLen-1)
 						for i, appo := range ap.psns[index].pos {
-							if appo.act == hstpsn.poSlc.act {
+							if equalPawnOpts(appo, hstpsn.poSlc) {
 								ap.psns[index].pos[i].wght -= reward
 								continue
 							}
@@ -143,7 +146,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 
 						punishment = reward / weight(apPosLen-1)
 						for i, appo := range ap.psns[index].pos {
-							if appo.act == hstpsn.poSlc.act {
+							if equalPawnOpts(appo, hstpsn.poSlc) {
 								ap.psns[index].pos[i].wght -= reward
 								continue
 							}
@@ -165,7 +168,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 
 						punishment = reward / weight(apPosLen-1)
 						for i, appo := range ap.psns[index].pos {
-							if appo.act == hstpsn.poSlc.act {
+							if equalPawnOpts(appo, hstpsn.poSlc) {
 								ap.psns[index].pos[i].wght += reward
 								continue
 							}
@@ -184,13 +187,13 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 					}
 
 					apPosLen = len(ap.psns[index].pos)
-					if apPosLen < 2 {
-						continue // Either zero or one pawn option to select; nothing to train on
+					if hstpsn.poSlc == nil || apPosLen < 2 {
+						continue // Either zero (stalemate) or one pawn option to select; nothing to train on
 					}
 
 					punishment = reward / weight(apPosLen-1)
 					for i, appo := range ap.psns[index].pos {
-						if appo.act == hstpsn.poSlc.act {
+						if equalPawnOpts(appo, hstpsn.poSlc) {
 							ap.psns[index].pos[i].wght -= reward
 							continue
 						}
@@ -243,7 +246,9 @@ func (ap *autoPlayer) move(psn *position) *event {
 // insert a position into an auto player and returns the position it is found in
 // after sorting.
 func (ap *autoPlayer) insert(brd board, st state) int {
-	ap.psns = append(ap.psns, &position{brd: copyBoard(brd), st: st, pos: availPawnOpts(brd, st)})
+	ap.psns = append(
+		ap.psns,
+		&position{brd: copyBoard(brd), st: st, pos: availPawnOpts(brd, st)})
 	sort.Slice(ap.psns, ap.less)
 	return ap.index(brd, st)
 }
