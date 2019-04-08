@@ -40,12 +40,12 @@ func (pos pawnOpts) index(po *pawnOpt) int {
 }
 
 // availPawnOpts returns a set of pawn options available at a position (m,n).
-func availPawnOpts(brd board, st state) []*pawnOpt {
-	po := make([]*pawnOpt, 0, 4)
+func availPawnOpts(brd board, st state) pawnOpts {
+	pos := make(pawnOpts, 0, 4)
 	var (
-		acts    []action // Set of actions for each position (i,j)
-		wght    weight   // Weight to apply to each action
 		actsLen int      // Number of available actions
+		wght    weight   // Weight to apply to each action
+		acts    []action // Set of actions for each position (i,j)
 	)
 
 	for i := range brd {
@@ -58,12 +58,12 @@ func availPawnOpts(brd board, st state) []*pawnOpt {
 
 			wght = 1.0 / weight(actsLen)
 			for k := range acts {
-				po = append(po, &pawnOpt{m: i, n: j, act: acts[k], wght: wght})
+				pos = append(pos, &pawnOpt{m: i, n: j, act: acts[k], wght: wght})
 			}
 		}
 	}
 
-	return po
+	return pos
 }
 
 // equalPawnOpts returns true if each pawn option field is equal.

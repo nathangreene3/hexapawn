@@ -102,25 +102,26 @@ func newGame(m, n int, md mode) *game {
 // play
 func play(m, n int, md mode) {
 	gm := newGame(m, n, md)
-
+	trainSessions := 10000
 	var psn *position
 
 	switch md {
 	case cvc:
 		white := newAutoPlayer(whiteSide)
 		black := newAutoPlayer(blackSide)
-		white.train(m, n, 10)
-		black.train(m, n, 10)
+		white.train(m, n, trainSessions)
+		black.train(m, n, trainSessions)
 		var gameOver bool
 
 		for !gameOver {
 			psn = &position{brd: gm.brd, st: gm.st, pos: availPawnOpts(gm.brd, gm.st)}
-			fmt.Printf("%s\n\n", gm.String())
 
 			switch gm.st {
 			case whiteTurn:
+				// fmt.Printf("%s\nwhite to move\n\n", gm.String())
 				gm.move(white.move(psn))
 			case blackTurn:
+				// fmt.Printf("%s\nblack to move\n\n", gm.String())
 				gm.move(black.move(psn))
 			default:
 				gameOver = true
@@ -133,6 +134,8 @@ func play(m, n int, md mode) {
 		log.Fatal("play: invalid mode")
 	}
 
+	// fmt.Println(gm.String())
+	// fmt.Println()
 	switch gm.st {
 	case whiteWin:
 		fmt.Println("WHITE WINS")
@@ -203,7 +206,7 @@ func (gm *game) move(evnt *event) {
 		case blackPawn:
 			switch act {
 			case forward:
-				if m+1 < len(gm.brd) && gm.brd[m][n] == space {
+				if m+1 < len(gm.brd) && gm.brd[m+1][n] == space {
 					gm.brd[m+1][n] = blackPawn
 					gm.brd[m][n] = space
 				}
@@ -300,52 +303,44 @@ func availActions(m, n int, brd board, st state) []action {
 // checkWin checks the board for a win condition given a state. If the state is
 // neither white nor black turn, then false is returned.
 func checkWin(brd board, st state) bool {
-	var count int
 	switch st {
 	case whiteTurn:
+		// Check if white pawn reached top row
 		for i := range brd[0] {
 			if brd[0][i] == whitePawn {
 				return true
 			}
-
-			count++
 		}
+
+		// Check if any black pieces remain
 		for i := 0; i < len(brd)-1; i++ {
 			for _, p := range brd[i] {
 				if p == blackPawn {
-					count++
+					return false
 				}
 			}
 		}
 
-		if count == 0 {
-			return true // No pieces left for black to move
-		}
-
-		return false
+		return true // White hasn't reached top row, but no pieces left for black to move
 	case blackTurn:
+		// Check if any black pieces reached bottom row
 		n := len(brd[0]) - 1
 		for i := range brd[n] {
 			if brd[n][i] == blackPawn {
 				return true
 			}
-
-			count++
 		}
 
+		// Check if any white pieces remain
 		for i := 1; i < len(brd); i++ {
 			for _, p := range brd[i] {
 				if p == whitePawn {
-					count++
+					return false
 				}
 			}
 		}
 
-		if count == 0 {
-			return true // No pieces left for white to move
-		}
-
-		return false
+		return true // Black has not reached bottom row, but no pieces left for white to move
 	default:
 		return false
 	}

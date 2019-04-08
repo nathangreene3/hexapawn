@@ -7,7 +7,9 @@ import (
 
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	play(3, 3, cvc)
+	for i := 0; i < 10; i++ {
+		play(3, 3, cvc)
+	}
 }
 
 func readMove(s state) (int, int, action) {
