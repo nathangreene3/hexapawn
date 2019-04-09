@@ -60,3 +60,18 @@ func equalPositions(psn0, psn1 *position) bool {
 		return true
 	}
 }
+
+func comparePositions(psn0, psn1 *position) int {
+	if psn0 == nil || psn1 == nil {
+		panic("lessPositions: cannot compare nil positions")
+	}
+
+	switch {
+	case psn0.st < psn1.st:
+		return -1
+	case psn1.st < psn0.st:
+		return 1
+	default:
+		return compareBoards(psn0.brd, psn1.brd)
+	}
+}

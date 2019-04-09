@@ -129,3 +129,59 @@ func symmetricEqualBoards(brd0, brd1 board) bool {
 
 	return true
 }
+
+func lessBoards(brd0, brd1 board) bool {
+	m := len(brd0)
+	if m != len(brd1) {
+		panic("lessBoards: cannot compare boards of differing dimensions")
+	}
+
+	n := len(brd0[0])
+	if n != len(brd1[0]) {
+		panic("lessBoards: cannot compare boards of differing dimensions")
+	}
+
+	var x, y pawn
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			x, y = brd0[i][j], brd1[i][j]
+			if x < y {
+				return true
+			}
+
+			if y < x {
+				return false
+			}
+		}
+	}
+
+	return false
+}
+
+func compareBoards(brd0, brd1 board) int {
+	m := len(brd0)
+	if m != len(brd1) {
+		panic("lessBoards: cannot compare boards of differing dimensions")
+	}
+
+	n := len(brd0[0])
+	if n != len(brd1[0]) {
+		panic("lessBoards: cannot compare boards of differing dimensions")
+	}
+
+	var x, y pawn
+	for i := 0; i < m; i++ {
+		for j := 0; j < n; j++ {
+			x, y = brd0[i][j], brd1[i][j]
+			if x < y {
+				return -1
+			}
+
+			if y < x {
+				return 1
+			}
+		}
+	}
+
+	return 0
+}

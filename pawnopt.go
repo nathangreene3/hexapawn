@@ -24,13 +24,13 @@ type pawnOpt struct {
 func (po *pawnOpt) String() string {
 	switch po.act {
 	case forward:
-		return fmt.Sprintf("forward pawnOpt at (%d,%d): action: %d weight: %0.2f\n", po.m, po.n, po.act, po.wght)
+		return fmt.Sprintf("pawnOpt: forward at (%d,%d), weight: %0.2f\n", po.m, po.n, po.wght)
 	case captureLeft:
-		return fmt.Sprintf("capture-left pawnOpt at (%d,%d): action: %d weight: %0.2f\n", po.m, po.n, po.act, po.wght)
+		return fmt.Sprintf("pawnOpt: capture-left at (%d,%d), weight: %0.2f\n", po.m, po.n, po.wght)
 	case captureRight:
-		return fmt.Sprintf("capture-right pawnOpt at (%d,%d): action: %d weight: %0.2f\n", po.m, po.n, po.act, po.wght)
+		return fmt.Sprintf("pawnOpt: capture-right at (%d,%d), weight: %0.2f\n", po.m, po.n, po.wght)
 	default:
-		return fmt.Sprintf("unknown pawnOpt at (%d,%d): action: %d weight: %0.2f\n", po.m, po.n, po.act, po.wght)
+		return fmt.Sprintf("pawnOpt: unknown action at (%d,%d), weight: %0.2f\n", po.m, po.n, po.wght)
 	}
 }
 
@@ -133,12 +133,63 @@ func copyPawnOpt(po *pawnOpt) *pawnOpt {
 	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
 }
 
-// less compares the weight field of two pawn options in a set. Assumes the pawns share the position (m,n).
+// less compares two pawn options on the position (m,n) and the action field in that order.
 func (pos pawnOpts) less(i, j int) bool {
-	acti, actj := pos[i].act, pos[j].act
-	if acti == actj {
-		return pos[i].wght < pos[j].wght
+	if pos[i].m < pos[j].m {
+		return true
 	}
 
-	return acti < actj
+	if pos[j].m < pos[i].m {
+		return false
+	}
+
+	// pos[i].m == pos[j].m
+	if pos[i].n < pos[j].n {
+		return true
+	}
+
+	if pos[j].n < pos[i].n {
+		return false
+	}
+
+	// pos[i].n == pos[j].n
+	return pos[i].act < pos[j].act
+}
+
+func lessPawnOpts(po0, po1 *pawnOpt) bool {
+	switch {
+	case po0 == nil, po1 == nil:
+		panic("lessPawnOpts: cannot compare nil pawn options")
+	case po0.m < po1.m:
+		return true
+	case po1.m < po0.m:
+		return false
+	case po0.n < po1.n:
+		return true
+	case po1.n < po0.n:
+		return false
+	default:
+		return po0.act < po1.act
+	}
+}
+
+func comparePawnOpts(po0, po1 *pawnOpt) int {
+	switch {
+	case po0 == nil, po1 == nil:
+		panic("lessPawnOpts: cannot compare nil pawn options")
+	case po0.m < po1.m:
+		return -1
+	case po1.m < po0.m:
+		return 1
+	case po0.n < po1.n:
+		return -1
+	case po1.n < po0.n:
+		return 1
+	case po0.act < po1.act:
+		return -1
+	case po1.act < po0.act:
+		return 1
+	default:
+		return 0
+	}
 }

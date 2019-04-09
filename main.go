@@ -8,7 +8,7 @@ import (
 
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	fmt.Println(playNGames(10, 3, 3, cvc))
+	fmt.Println(playNGames(1, 3, 3, cvc))
 }
 
 func readMove(s state) (int, int, action) {

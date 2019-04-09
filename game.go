@@ -151,7 +151,7 @@ func playNGames(numGames, m, n int, md mode) string {
 	var (
 		gm            *game
 		psn           *position
-		trainSessions = 100000
+		trainSessions = 100
 		whiteWins     int
 		blackWins     int
 		stalemates    int
@@ -197,7 +197,9 @@ func playNGames(numGames, m, n int, md mode) string {
 				log.Fatal("playNGames: invalid endgame state")
 			}
 		}
+
 		fmt.Println(white.String())
+		fmt.Println("white boards:", len(white.psns))
 	case cvp: // TODO
 	case pvc: // TODO
 	case pvp: // TODO
