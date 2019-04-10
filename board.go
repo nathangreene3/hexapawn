@@ -87,12 +87,12 @@ func copyBoard(brd board) board {
 func equalBoards(brd0, brd1 board) bool {
 	m := len(brd0)
 	if m != len(brd1) {
-		return false
+		panic("lessBoards: cannot compare boards of differing dimensions")
 	}
 
 	n := len(brd0[0])
 	if n != len(brd1[0]) {
-		return false
+		panic("lessBoards: cannot compare boards of differing dimensions")
 	}
 
 	for i := 0; i < m; i++ {

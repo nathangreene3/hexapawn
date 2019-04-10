@@ -86,6 +86,11 @@ func availPawnOpts(brd board, st state) pawnOpts {
 	return pos
 }
 
+// copyPawnOpt returns a copy of a pawn option.
+func copyPawnOpt(po *pawnOpt) *pawnOpt {
+	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
+}
+
 // equalPawnOpts returns true if each pawn option field is equal, EXCEPT for the weight field.
 func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	switch {
@@ -102,11 +107,6 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	default:
 		return true
 	}
-}
-
-// copyPawnOpt returns a copy of a pawn option.
-func copyPawnOpt(po *pawnOpt) *pawnOpt {
-	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
 }
 
 // less compares two pawn options on the position (m,n) and the action field in that order.

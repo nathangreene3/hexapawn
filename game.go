@@ -102,7 +102,7 @@ func newGame(m, n int, md mode) *game {
 // play
 func play(m, n int, md mode) {
 	gm := newGame(m, n, md)
-	trainSessions := 10000
+	trainSessions := 100000
 	var psn *position
 
 	switch md {
@@ -152,7 +152,7 @@ func playNGames(numGames, m, n int, md mode) string {
 	var (
 		gm            *game     // Game to be played
 		psn           *position // Position at each turn
-		trainSessions = 100     // Number of games to train each side on
+		trainSessions = 1000    // Number of games to train each side on
 		whiteWins     int       // Number of white wins
 		blackWins     int       // Number of black wins
 		stalemates    int       // Number of stalemates reached
@@ -291,7 +291,8 @@ func (gm *game) move(evnt *event) {
 				gm.st = whiteTurn
 			}
 		default:
-			panic("move: cannot move space")
+			// panic("move: cannot move space")
+			log.Fatalf("move: cannot move space\n%v\nevent: %v\n", gm.brd, evnt.poSlc)
 		}
 	} else {
 		gm.st = stalemate

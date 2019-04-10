@@ -26,3 +26,12 @@ func (hst history) index(brd board) int {
 func equalEvents(evnt0, evnt1 *event) bool {
 	return equalPositions(evnt0.psn, evnt1.psn) && equalPawnOpts(evnt0.poSlc, evnt1.poSlc)
 }
+
+func compareEvents(evnt0, evnt1 *event) int {
+	r := comparePositions(evnt0.psn, evnt1.psn)
+	if r == 0 {
+		return comparePawnOpts(evnt0.poSlc, evnt1.poSlc) // Equal positions
+	}
+
+	return r
+}

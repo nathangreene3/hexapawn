@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"sort"
@@ -230,12 +231,15 @@ func (ap *autoPlayer) move(psn *position) *event {
 	if index == len(ap.psns) {
 		index = ap.insert(psn)
 	}
+	fmt.Printf("psn.pos:\n%s\n", psn)
+	fmt.Printf("ap.psns[%d]:\n%s\n", index, ap.psns[index])
 
 	choice := weight(rand.Float64())
 	var sum weight
 	for _, po := range ap.psns[index].pos {
 		sum += po.wght
 		if choice <= sum {
+			fmt.Printf("po: %v\n", po)
 			return &event{psn: copyPosition(psn), poSlc: copyPawnOpt(po)}
 		}
 	}
@@ -261,6 +265,16 @@ func (ap *autoPlayer) remove(i int) *position {
 // index returns the index a position is found in an auto player. If the position
 // is not found, len(ap.psns) is returned.
 func (ap *autoPlayer) index(psn *position) int {
+	// for i := range ap.psns {
+	// 	if equalPositions(ap.psns[i], psn) {
+	// 		return i
+	// 	}
+	// }
+
+	// return len(ap.psns)
+
+	// return ap.search(psn, 0, len(ap.psns)-1)
+
 	return sort.Search(len(ap.psns), func(i int) bool { return lessEqPositions(psn, ap.psns[i]) })
 }
 
@@ -280,4 +294,45 @@ func (ap *autoPlayer) lessEq(i, j int) bool {
 	}
 
 	return true
+}
+
+func (ap *autoPlayer) isSorted() bool {
+	n := len(ap.psns) - 1
+	for i := 0; i < n; i++ {
+		if 0 < comparePositions(ap.psns[i], ap.psns[i+1]) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (ap *autoPlayer) search(psn *position, i, j int) int {
+	var k int
+
+	// THIS WORKS
+	// for i <= j {
+	// 	k = i + int(uint(j-i)>>1)
+	// 	switch comparePositions(psn, ap.psns[k]) {
+	// 	case -1:
+	// 		j = k - 1
+	// 	case 1:
+	// 		i = k + 1
+	// 	default:
+	// 		return k
+	// 	}
+	// }
+
+	// THIS DOESN'T WORK
+	for i < j {
+		k = i + int(uint(j-i)>>1)
+		if 0 < comparePositions(psn, ap.psns[k]) {
+			i = k + 1 // ap.psns[k] < psn
+			continue
+		}
+
+		j = k // psn <= ap.psns[k]
+	}
+
+	return i
 }
