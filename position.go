@@ -61,6 +61,22 @@ func equalPositions(psn0, psn1 *position) bool {
 	}
 }
 
+func lessPositions(psn0, psn1 *position) bool {
+	if comparePositions(psn0, psn1) < 0 {
+		return true
+	}
+
+	return false
+}
+
+func lessEqPositions(psn0, psn1 *position) bool {
+	if 0 < comparePositions(psn0, psn1) {
+		return false
+	}
+
+	return true
+}
+
 func comparePositions(psn0, psn1 *position) int {
 	if psn0 == nil || psn1 == nil {
 		panic("lessPositions: cannot compare nil positions")
@@ -72,6 +88,6 @@ func comparePositions(psn0, psn1 *position) int {
 	case psn1.st < psn0.st:
 		return 1
 	default:
-		return compareBoards(psn0.brd, psn1.brd)
+		return compareBoards(psn0.brd, psn1.brd) // states are equal
 	}
 }

@@ -45,13 +45,13 @@ func newAutoPlayer(sd side) *autoPlayer {
 // train returns an auto player that is capable of playing hexapawn.
 func (ap *autoPlayer) train(m, n, numGames int) {
 	var (
-		gameOver   bool
-		index      int
-		apPosLen   int
-		punishment weight
-		reward     = weight(0.1)
-		gm         *game
-		psn        *position
+		gameOver   bool          // Indicates game was won/lost
+		index      int           // Index of position in auto player
+		apPosLen   int           // Number of pawn options in the indexed position of auto player
+		punishment weight        // Amount to alter non-selected pawn options' weights
+		reward     = weight(0.1) // Amount to alter selected pawn option weight
+		gm         *game         // Game to be played for a given number of games
+		psn        *position     // Current position of the game
 	)
 
 	for k := 0; k < numGames; k++ {
@@ -215,11 +215,11 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 // randPawnOpt returns a random pawn option (nil if none available).
 func randPawnOpt(psn *position) *pawnOpt {
 	n := len(psn.pos)
-	if n == 0 {
-		return nil
+	if 0 < n {
+		return psn.pos[rand.Intn(n)]
 	}
 
-	return psn.pos[rand.Intn(n)]
+	return nil
 }
 
 // move returns an event representing an action taken on a given position. An event
@@ -247,7 +247,7 @@ func (ap *autoPlayer) move(psn *position) *event {
 // after sorting.
 func (ap *autoPlayer) insert(psn *position) int {
 	ap.psns = append(ap.psns, copyPosition(psn))
-	sort.Slice(ap.psns, ap.less)
+	sort.SliceStable(ap.psns, ap.less)
 	return ap.index(psn)
 }
 
@@ -261,34 +261,23 @@ func (ap *autoPlayer) remove(i int) *position {
 // index returns the index a position is found in an auto player. If the position
 // is not found, len(ap.psns) is returned.
 func (ap *autoPlayer) index(psn *position) int {
-	return sort.Search(
-		len(ap.psns),
-		func(i int) bool {
-			if comparePositions(ap.psns[i], psn) <= 0 {
-				return true
-			}
-
-			return false
-		},
-	)
+	return sort.Search(len(ap.psns), func(i int) bool { return lessEqPositions(psn, ap.psns[i]) })
 }
 
 // Less returns true if each less-than pawn comparison in two boards is true and
 // false if otherwise.
 func (ap *autoPlayer) less(i, j int) bool {
-	var x, y pawn
-	for a := range ap.psns[i].brd {
-		for b := range ap.psns[i].brd[a] {
-			x, y = ap.psns[i].brd[a][b], ap.psns[j].brd[a][b]
-			if x < y {
-				return true
-			}
-
-			if y < x {
-				return false
-			}
-		}
+	if comparePositions(ap.psns[i], ap.psns[j]) < 0 {
+		return true
 	}
 
-	return false // Equal at this point
+	return false
+}
+
+func (ap *autoPlayer) lessEq(i, j int) bool {
+	if 0 < comparePositions(ap.psns[i], ap.psns[j]) {
+		return false
+	}
+
+	return true
 }

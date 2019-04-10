@@ -34,47 +34,27 @@ func (po *pawnOpt) String() string {
 	}
 }
 
-// func (po *pawnOpt)toBytes()[]byte{
-// 	switch po.act {
-// 	case forward:
-// 		return fmt.Sprintf("forward pawnOpt at (%d,%d): action: %d weight: %0.2f", po.m, po.n, po.act, po.wght)
-// 	case captureLeft:
-// 		return fmt.Sprintf("capture-left pawnOpt at (%d,%d): action: %d weight: %0.2f", po.m, po.n, po.act, po.wght)
-// 	case captureRight:
-// 		return fmt.Sprintf("capture-right pawnOpt at (%d,%d): action: %d weight: %0.2f", po.m, po.n, po.act, po.wght)
-// 	default:
-// 		return fmt.Sprintf("unknown pawnOpt at (%d,%d): action: %d weight: %0.2f", po.m, po.n, po.act, po.wght)
-// 	}
-// }
-
-// insert a pawn option into a set. The pawn option will be copied.
+// insert a pawn option into a set and return the index it was inserted into. The pawn option will be copied.
 func (pos pawnOpts) insert(po *pawnOpt) int {
-	switch len(pos) {
-	case 0:
-		pos = append(pos, copyPawnOpt(po))
-		return 0
-	case pos.index(po):
-		pos = append(pos, copyPawnOpt(po))
-		sort.Slice(pos, pos.less)
-		return pos.index(po)
-	default:
-		return pos.index(po)
-	}
+	pos = append(pos, copyPawnOpt(po))
+	sort.SliceStable(pos, pos.less)
+	return pos.index(po)
 }
 
 // index returns the index a pawn option is found in a set of pawn options. If the
 // pawn option is not found, len(pos) is returned.
 func (pos pawnOpts) index(po *pawnOpt) int {
-	return sort.Search(len(pos), func(i int) bool { return equalPawnOpts(pos[i], po) })
+	return sort.Search(len(pos), func(i int) bool { return lessPawnOpts(po, pos[i]) })
 }
 
 // availPawnOpts returns a set of pawn options available given a board state.
 func availPawnOpts(brd board, st state) pawnOpts {
-	pos := make(pawnOpts, 0, 4)
 	var (
-		actsLen   int      // Number of available actions per pawn
-		actsCount int      // Total number of actions available per board state
-		acts      []action // Set of actions for each position (i,j)
+		actsLen   int                    // Number of available actions per pawn
+		actsCount int                    // Total number of actions available per board state
+		wght      weight                 // Weight to apply to each pawn option
+		acts      []action               // Set of actions for each position (i,j)
+		pos       = make(pawnOpts, 0, 4) // Pawn options available to a given side (determined by state)
 	)
 
 	for i := range brd {
@@ -86,14 +66,12 @@ func availPawnOpts(brd board, st state) pawnOpts {
 			}
 
 			actsCount += actsLen
-
 			for k := range acts {
 				pos = append(pos, &pawnOpt{m: i, n: j, act: acts[k]})
 			}
 		}
 	}
 
-	var wght weight
 	if actsCount < 2 {
 		wght = 1
 	} else {
@@ -104,6 +82,7 @@ func availPawnOpts(brd board, st state) pawnOpts {
 		pos[i].wght = wght
 	}
 
+	sort.Slice(pos, pos.less)
 	return pos
 }
 
@@ -120,9 +99,6 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 		return false
 	case po0.act != po1.act:
 		return false
-	// Weight is not an important field for searching/comparing
-	// case po0.wght != po1.wght:
-	// 	return false
 	default:
 		return true
 	}
@@ -135,42 +111,27 @@ func copyPawnOpt(po *pawnOpt) *pawnOpt {
 
 // less compares two pawn options on the position (m,n) and the action field in that order.
 func (pos pawnOpts) less(i, j int) bool {
-	if pos[i].m < pos[j].m {
+	if comparePawnOpts(pos[i], pos[j]) < 0 {
 		return true
 	}
 
-	if pos[j].m < pos[i].m {
-		return false
-	}
-
-	// pos[i].m == pos[j].m
-	if pos[i].n < pos[j].n {
-		return true
-	}
-
-	if pos[j].n < pos[i].n {
-		return false
-	}
-
-	// pos[i].n == pos[j].n
-	return pos[i].act < pos[j].act
+	return false
 }
 
 func lessPawnOpts(po0, po1 *pawnOpt) bool {
-	switch {
-	case po0 == nil, po1 == nil:
-		panic("lessPawnOpts: cannot compare nil pawn options")
-	case po0.m < po1.m:
+	if comparePawnOpts(po0, po1) < 0 {
 		return true
-	case po1.m < po0.m:
-		return false
-	case po0.n < po1.n:
-		return true
-	case po1.n < po0.n:
-		return false
-	default:
-		return po0.act < po1.act
 	}
+
+	return false
+}
+
+func lessEqPawnOpts(po0, po1 *pawnOpt) bool {
+	if 0 < comparePawnOpts(po0, po1) {
+		return false
+	}
+
+	return true
 }
 
 func comparePawnOpts(po0, po1 *pawnOpt) int {

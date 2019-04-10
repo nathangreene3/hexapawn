@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strings"
 )
 
@@ -149,12 +150,12 @@ func play(m, n int, md mode) {
 
 func playNGames(numGames, m, n int, md mode) string {
 	var (
-		gm            *game
-		psn           *position
-		trainSessions = 100
-		whiteWins     int
-		blackWins     int
-		stalemates    int
+		gm            *game     // Game to be played
+		psn           *position // Position at each turn
+		trainSessions = 100     // Number of games to train each side on
+		whiteWins     int       // Number of white wins
+		blackWins     int       // Number of black wins
+		stalemates    int       // Number of stalemates reached
 	)
 
 	switch md {
@@ -359,6 +360,7 @@ func availActions(m, n int, brd board, st state) []action {
 		}
 	}
 
+	sort.Slice(acts, func(i, j int) bool { return acts[i] < acts[j] })
 	return acts
 }
 
@@ -367,7 +369,7 @@ func availActions(m, n int, brd board, st state) []action {
 func checkWin(brd board, st state) bool {
 	switch st {
 	case whiteTurn:
-		// Check if white pawn reached top row
+		// Check if any white pawns reached top row
 		for i := range brd[0] {
 			if brd[0][i] == whitePawn {
 				return true
@@ -385,7 +387,7 @@ func checkWin(brd board, st state) bool {
 
 		return true // White hasn't reached top row, but no pieces left for black to move
 	case blackTurn:
-		// Check if any black pieces reached bottom row
+		// Check if any black pawns reached bottom row
 		n := len(brd[0]) - 1
 		for i := range brd[n] {
 			if brd[n][i] == blackPawn {
@@ -404,6 +406,6 @@ func checkWin(brd board, st state) bool {
 
 		return true // Black has not reached bottom row, but no pieces left for white to move
 	default:
-		return false
+		return false // Neither white nor black's turn; the game is not over
 	}
 }
