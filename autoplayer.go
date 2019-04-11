@@ -15,14 +15,16 @@ import (
 // <-|-|--|----|->
 //   0 w0 w1   w2=1
 
-// autoPlayer is a set of positions that can be trained. The pawn option selection
-// will be set for each field to indicate the optimal pawn option and the set of
-// pawn options will be optimized and ranked.
+// autoPlayer is an assigned side with a set of positions trained on to play
+// hexapawn. An auto player can only play on mxn boards.
 type autoPlayer struct {
 	sd   side        // White or black side
+	m    int         // Number of rows
+	n    int         // Number of columns
 	psns []*position // Set of positions experienced
 }
 
+// String returns a formated representation of an autoplayer.
 func (ap *autoPlayer) String() string {
 	bldr := strings.Builder{}
 
@@ -35,28 +37,31 @@ func (ap *autoPlayer) String() string {
 }
 
 // newAutoPlayer returns an autoPlayer associated with a side.
-func newAutoPlayer(sd side) *autoPlayer {
+func newAutoPlayer(sd side, m, n int) *autoPlayer {
 	if sd != whiteSide && sd != blackSide {
 		panic("newAutoPlayer: invalid side")
 	}
 
-	return &autoPlayer{sd: sd, psns: make([]*position, 0, 32)}
+	if m < 3 || n < 3 {
+		panic("newAutoPlayer: invalid dimensions")
+	}
+
+	return &autoPlayer{sd: sd, m: m, n: n, psns: make([]*position, 0, 32)}
 }
 
 // train an auto player on a number of random games.
-func (ap *autoPlayer) train(m, n, numGames int) {
+func (ap *autoPlayer) train(numGames int, learningRate weight) {
 	var (
-		gameOver   bool          // Indicates game was won/lost
-		index      int           // Index of position in auto player
-		apPosLen   int           // Number of pawn options in the indexed position of auto player
-		punishment weight        // Amount to alter non-selected pawn options' weights
-		reward     = weight(0.1) // Amount to alter selected pawn option weight
-		gm         *game         // Game to be played for a given number of games
-		psn        *position     // Current position of the game
+		gameOver   bool      // Indicates game was won/lost
+		index      int       // Index of position in auto player
+		apPosLen   int       // Number of pawn options in the indexed position of auto player
+		punishment weight    // Amount to alter non-selected pawn options' weights
+		gm         *game     // Game to be played for a given number of games
+		psn        *position // Current position of the game
 	)
 
 	for k := 0; k < numGames; k++ {
-		gm = newGame(m, n, cvc)
+		gm = newGame(ap.m, ap.n, cvc)
 		gameOver = false
 
 		// Alternate turns until neither side can move (that is, win, illegal, or stalemate state is reached)
@@ -71,7 +76,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 			case whiteTurn:
 				switch ap.sd {
 				case whiteSide:
-					gm.move(ap.move(psn))
+					gm.move(ap.choosePawnOpt(psn))
 				case blackSide:
 					gm.move(&event{psn: copyPosition(psn), poSlc: randPawnOpt(psn)})
 				}
@@ -80,13 +85,13 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 				case whiteSide:
 					gm.move(&event{psn: copyPosition(psn), poSlc: randPawnOpt(psn)})
 				case blackSide:
-					gm.move(ap.move(psn))
+					gm.move(ap.choosePawnOpt(psn))
 				}
 			case whiteWin:
 				switch ap.sd {
 				case whiteSide:
-					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.psn)
+					for _, evnt := range gm.hst {
+						index = ap.index(evnt.psn)
 						if index < 0 {
 							continue
 						}
@@ -96,10 +101,10 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 							continue // Either zero or one pawn option to select; nothing to train on
 						}
 
-						punishment = reward / weight(apPosLen-1)
-						for i, appo := range ap.psns[index].pos {
-							if equalPawnOpts(appo, hstpsn.poSlc) {
-								ap.psns[index].pos[i].wght += reward
+						punishment = learningRate / weight(apPosLen-1)
+						for i := range ap.psns[index].pos {
+							if equalPawnOpts(ap.psns[index].pos[i], evnt.poSlc) {
+								ap.psns[index].pos[i].wght += learningRate
 								continue
 							}
 
@@ -107,8 +112,8 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 						}
 					}
 				case blackSide:
-					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.psn)
+					for _, evnt := range gm.hst {
+						index = ap.index(evnt.psn)
 						if index < 0 {
 							continue
 						}
@@ -118,10 +123,10 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 							continue // Either zero or one pawn option to select; nothing to train on
 						}
 
-						punishment = reward / weight(apPosLen-1)
-						for i, appo := range ap.psns[index].pos {
-							if equalPawnOpts(appo, hstpsn.poSlc) {
-								ap.psns[index].pos[i].wght -= reward
+						punishment = learningRate / weight(apPosLen-1)
+						for i := range ap.psns[index].pos {
+							if equalPawnOpts(ap.psns[index].pos[i], evnt.poSlc) {
+								ap.psns[index].pos[i].wght -= learningRate
 								continue
 							}
 
@@ -134,8 +139,8 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 			case blackWin:
 				switch ap.sd {
 				case whiteSide:
-					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.psn)
+					for _, evnt := range gm.hst {
+						index = ap.index(evnt.psn)
 						if index < 0 {
 							continue
 						}
@@ -145,10 +150,10 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 							continue // Either zero or one pawn option to select; nothing to train on
 						}
 
-						punishment = reward / weight(apPosLen-1)
-						for i, appo := range ap.psns[index].pos {
-							if equalPawnOpts(appo, hstpsn.poSlc) {
-								ap.psns[index].pos[i].wght -= reward
+						punishment = learningRate / weight(apPosLen-1)
+						for i := range ap.psns[index].pos {
+							if equalPawnOpts(ap.psns[index].pos[i], evnt.poSlc) {
+								ap.psns[index].pos[i].wght -= learningRate
 								continue
 							}
 
@@ -156,8 +161,8 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 						}
 					}
 				case blackSide:
-					for _, hstpsn := range gm.hst {
-						index = ap.index(hstpsn.psn)
+					for _, evnt := range gm.hst {
+						index = ap.index(evnt.psn)
 						if index < 0 {
 							continue
 						}
@@ -167,10 +172,10 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 							continue // Either zero or one pawn option to select; nothing to train on
 						}
 
-						punishment = reward / weight(apPosLen-1)
-						for i, appo := range ap.psns[index].pos {
-							if equalPawnOpts(appo, hstpsn.poSlc) {
-								ap.psns[index].pos[i].wght += reward
+						punishment = learningRate / weight(apPosLen-1)
+						for i := range ap.psns[index].pos {
+							if equalPawnOpts(ap.psns[index].pos[i], evnt.poSlc) {
+								ap.psns[index].pos[i].wght += learningRate
 								continue
 							}
 
@@ -181,21 +186,21 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 
 				gameOver = true
 			case stalemate:
-				for _, hstpsn := range gm.hst {
-					index = ap.index(hstpsn.psn)
+				for _, evnt := range gm.hst {
+					index = ap.index(evnt.psn)
 					if index < 0 {
 						continue
 					}
 
 					apPosLen = len(ap.psns[index].pos)
-					if hstpsn.poSlc == nil || apPosLen < 2 {
+					if evnt.poSlc == nil || apPosLen < 2 {
 						continue // Either zero (stalemate) or one pawn option to select; nothing to train on
 					}
 
-					punishment = reward / weight(apPosLen-1)
-					for i, appo := range ap.psns[index].pos {
-						if equalPawnOpts(appo, hstpsn.poSlc) {
-							ap.psns[index].pos[i].wght -= reward
+					punishment = learningRate / weight(apPosLen-1)
+					for i := range ap.psns[index].pos {
+						if equalPawnOpts(ap.psns[index].pos[i], evnt.poSlc) {
+							ap.psns[index].pos[i].wght -= learningRate
 							continue
 						}
 
@@ -213,7 +218,8 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 	}
 }
 
-// randPawnOpt returns a random pawn option at a given position (nil if none available).
+// randPawnOpt returns a random pawn option at a given position (nil if none
+// available).
 func randPawnOpt(psn *position) *pawnOpt {
 	n := len(psn.pos)
 	if 0 < n {
@@ -223,10 +229,10 @@ func randPawnOpt(psn *position) *pawnOpt {
 	return nil
 }
 
-// move returns an event representing an action taken on a given position. An event
+// choosePawnOpt returns an event representing an action taken on a given position. An event
 // with no pawn option selected is returned if a position has no available pawn
 // options.
-func (ap *autoPlayer) move(psn *position) *event {
+func (ap *autoPlayer) choosePawnOpt(psn *position) *event {
 	index := ap.index(psn)
 	if index < 0 {
 		index = ap.insert(psn)
@@ -235,6 +241,10 @@ func (ap *autoPlayer) move(psn *position) *event {
 	choice := weight(rand.Float64())
 	var sum weight
 	for _, po := range ap.psns[index].pos {
+		if po.wght < 0 {
+			continue
+		}
+
 		sum += po.wght
 		if choice <= sum {
 			return &event{psn: copyPosition(psn), poSlc: copyPawnOpt(po)}

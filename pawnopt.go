@@ -5,7 +5,6 @@ import (
 	"sort"
 )
 
-// TODO: redefine to something more appropriate
 // weight is a probability value on the range [0,1].
 type weight float64
 
@@ -21,6 +20,7 @@ type pawnOpt struct {
 	wght weight // Probability of selecting action
 }
 
+// String returns a formated representation of a pawn option.
 func (po *pawnOpt) String() string {
 	switch po.act {
 	case forward:
@@ -34,7 +34,8 @@ func (po *pawnOpt) String() string {
 	}
 }
 
-// insert a pawn option into a set and return the index it was inserted into. The pawn option will be copied.
+// insert a pawn option into a set and return the index it was inserted into.
+// Allows duplicate entries.
 func (pos pawnOpts) insert(po *pawnOpt) int {
 	pos = append(pos, copyPawnOpt(po))
 	sort.SliceStable(pos, pos.less)
@@ -102,7 +103,8 @@ func copyPawnOpt(po *pawnOpt) *pawnOpt {
 	}
 }
 
-// equalPawnOpts returns true if each pawn option field is equal, EXCEPT for the weight field. If both pawn options are nil, true is returned.
+// equalPawnOpts compares two pawn options. Returns true if both are nil or all
+// fields EXCEPT weight are equal.
 func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	switch {
 	case po0 == nil:
@@ -120,7 +122,8 @@ func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	}
 }
 
-// less compares two pawn options on the position (m,n) and the action field in that order.
+// less compares two pawn options on the position (m,n) and the action field in
+// that order.
 func (pos pawnOpts) less(i, j int) bool {
 	if comparePawnOpts(pos[i], pos[j]) < 0 {
 		return true
@@ -129,7 +132,8 @@ func (pos pawnOpts) less(i, j int) bool {
 	return false
 }
 
-// lessPawnOpts compares two pawn options on the position (m,n) and the action field in that order. Panics if either pawn option is nil.
+// lessPawnOpts compares two pawn options on the position (m,n) and the action
+// field in that order. Panics if either pawn option is nil.
 func lessPawnOpts(po0, po1 *pawnOpt) bool {
 	if comparePawnOpts(po0, po1) < 0 {
 		return true
@@ -138,7 +142,8 @@ func lessPawnOpts(po0, po1 *pawnOpt) bool {
 	return false
 }
 
-// lessEqPawnOpts compares two pawn options on the position (m,n) and the action field in that order. Panics if either pawn option is nil.
+// lessEqPawnOpts compares two pawn options on the position (m,n) and the action
+// field in that order. Panics if either pawn option is nil.
 func lessEqPawnOpts(po0, po1 *pawnOpt) bool {
 	if 0 < comparePawnOpts(po0, po1) {
 		return false
@@ -147,7 +152,9 @@ func lessEqPawnOpts(po0, po1 *pawnOpt) bool {
 	return true
 }
 
-// comparePawnOpts compares two pawn options on the position (m,n) and the action field in that order. Returns -1 if po0 < po1, 0 if po0 = po1, and 1 if po0 > po1. Panics if either pawn option is nil.
+// comparePawnOpts compares two pawn options on the position (m,n) and the action
+// field in that order. Returns -1 if po0 < po1, 0 if po0 = po1, and 1 if po0 > po1.
+// Panics if either pawn option is nil.
 func comparePawnOpts(po0, po1 *pawnOpt) int {
 	switch {
 	case po0 == nil, po1 == nil:

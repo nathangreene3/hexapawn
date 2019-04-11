@@ -10,7 +10,8 @@ import (
 // action represents what a player can do at a position (m,n) on a board.
 type action byte
 
-// mode indicates player vs player, player vs an auto player, or auto player vs auto player.
+// mode indicates player vs player, player vs an auto player, or auto player vs
+// auto player.
 type mode byte
 
 // pawn is a playable piece or a blank space.
@@ -57,12 +58,12 @@ const (
 	blackSide = side('b')
 
 	// States
-	illegal state = iota
-	whiteTurn
-	blackTurn
-	whiteWin
-	blackWin
-	stalemate
+	illegal   state = iota // Game halts on illegal state
+	whiteTurn              // Game continues
+	blackTurn              // Game continues
+	whiteWin               // Game is over when white wins
+	blackWin               // Game is over when black wins
+	stalemate              // Game is over when stalemate occurs
 )
 
 // String returns a string representing the current state of a game.
@@ -106,14 +107,15 @@ func newGame(m, n int, md mode) *game {
 func play(m, n int, md mode) {
 	gm := newGame(m, n, md)
 	trainSessions := 100000
+	learningRate := weight(0.1)
 	var psn *position
 
 	switch md {
 	case cvc:
-		white := newAutoPlayer(whiteSide)
-		black := newAutoPlayer(blackSide)
-		white.train(m, n, trainSessions)
-		black.train(m, n, trainSessions)
+		white := newAutoPlayer(whiteSide, m, n)
+		black := newAutoPlayer(blackSide, m, n)
+		white.train(trainSessions, learningRate)
+		black.train(trainSessions, learningRate)
 		var gameOver bool
 
 		for !gameOver {
@@ -122,10 +124,10 @@ func play(m, n int, md mode) {
 			switch gm.st {
 			case whiteTurn:
 				// fmt.Printf("%s\nwhite to move\n\n", gm.String())
-				gm.move(white.move(psn))
+				gm.move(white.choosePawnOpt(psn))
 			case blackTurn:
 				// fmt.Printf("%s\nblack to move\n\n", gm.String())
-				gm.move(black.move(psn))
+				gm.move(black.choosePawnOpt(psn))
 			default:
 				gameOver = true
 			}
@@ -151,7 +153,7 @@ func play(m, n int, md mode) {
 	}
 }
 
-func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
+func playNGames(numGames, numTrainSessions int, learningRate weight, m, n int, md mode) string {
 	var (
 		gm         *game     // Game to be played
 		psn        *position // Position at each turn
@@ -162,10 +164,10 @@ func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
 
 	switch md {
 	case cvc:
-		white := newAutoPlayer(whiteSide)
-		black := newAutoPlayer(blackSide)
-		white.train(m, n, numTrainSessions)
-		black.train(m, n, numTrainSessions)
+		white := newAutoPlayer(whiteSide, m, n)
+		black := newAutoPlayer(blackSide, m, n)
+		white.train(numTrainSessions, learningRate)
+		black.train(numTrainSessions, learningRate)
 
 		for ; 0 < numGames; numGames-- {
 			gm = newGame(m, n, md)
@@ -177,12 +179,12 @@ func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
 				}
 
 				if gm.st == whiteTurn {
-					gm.move(white.move(psn))
+					gm.move(white.choosePawnOpt(psn))
 					continue
 				}
 
 				if gm.st == blackTurn {
-					gm.move(black.move(psn))
+					gm.move(black.choosePawnOpt(psn))
 					continue
 				}
 
@@ -201,7 +203,7 @@ func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
 			}
 		}
 
-		fmt.Println("white boards:", len(white.psns))
+		fmt.Printf("%s\nwhite boards: %d\nblack boards: %d\n\n", gm, len(white.psns), len(black.psns))
 	case cvp: // TODO
 	case pvc: // TODO
 	case pvp: // TODO
@@ -209,7 +211,7 @@ func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
 		log.Fatal("playNGames: invalid mode")
 	}
 
-	return fmt.Sprintf("white wins:  %d\nblack wins:  %d\nstalemates:  %d\n--------------\n     total: %d", whiteWins, blackWins, stalemates, whiteWins+blackWins+stalemates)
+	return fmt.Sprintf("white wins:  %d\nblack wins:  %d\nstalemates:  %d\n---------------\n     total: %d", whiteWins, blackWins, stalemates, whiteWins+blackWins+stalemates)
 }
 
 // turn
@@ -297,7 +299,7 @@ func (gm *game) move(evnt *event) {
 			panic("move: cannot move space")
 		}
 	} else {
-		gm.st = stalemate
+		gm.st = stalemate // No pawn option selected is stalemate
 	}
 
 	gm.hst = append(gm.hst, evnt)
@@ -306,9 +308,9 @@ func (gm *game) move(evnt *event) {
 // availActions returns a set of actions that can be taken at a position (m,n).
 // Actions are available if the state is either white or black turn.
 func availActions(m, n int, brd board, st state) []action {
-	acts := make([]action, 0, 4)
-	lenB := len(brd)
-	lenB0m1 := len(brd[0]) - 1
+	acts := make([]action, 0, 4) // Actions to return
+	lenB := len(brd)             // Number of rows
+	lenB0m1 := len(brd[0]) - 1   // Number of columns minus one
 
 	switch st {
 	case whiteTurn:
@@ -391,7 +393,7 @@ func checkWin(brd board, st state) bool {
 		return true // White hasn't reached top row, but no pieces left for black to move
 	case blackTurn:
 		// Check if any black pawns reached bottom row
-		n := len(brd[0]) - 1
+		n := len(brd) - 1 // Index of bottom row
 		for i := range brd[n] {
 			if brd[n][i] == blackPawn {
 				return true

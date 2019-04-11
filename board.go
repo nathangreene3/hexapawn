@@ -87,41 +87,17 @@ func copyBoard(brd board) board {
 func equalBoards(brd0, brd1 board) bool {
 	m := len(brd0)
 	if m != len(brd1) {
-		panic("lessBoards: cannot compare boards of differing dimensions")
+		panic("equalBoards: cannot compare boards of differing dimensions")
 	}
 
 	n := len(brd0[0])
 	if n != len(brd1[0]) {
-		panic("lessBoards: cannot compare boards of differing dimensions")
+		panic("equalBoards: cannot compare boards of differing dimensions")
 	}
 
 	for i := 0; i < m; i++ {
 		for j := 0; j < n; j++ {
 			if brd0[i][j] != brd1[i][j] {
-				return false
-			}
-		}
-	}
-
-	return true
-}
-
-// symmetricEqualBoards returns true if two boards are equal reflection across the
-// vertical axis and false if otherwise. That is, b == reflect(c) is returned.
-func symmetricEqualBoards(brd0, brd1 board) bool {
-	m := len(brd0)
-	if m != len(brd1) {
-		return false
-	}
-
-	n := len(brd0[0])
-	if n != len(brd1[0]) {
-		return false
-	}
-
-	for i := 0; i < m; i++ {
-		for j := 0; j < n; j++ {
-			if brd0[i][j] != brd1[i][n-j-1] {
 				return false
 			}
 		}
@@ -148,16 +124,17 @@ func lessEqBoards(brd0, brd1 board) bool {
 	return true
 }
 
-// compareBoards compares two boards returning -1 if brd0 < brd1, 0 if brd0 = brd1, and 1 if brd0 > brd1. Panics if boards are not equal in dimension.
+// compareBoards compares two boards returning -1 if brd0 < brd1, 0 if
+// brd0 = brd1, and 1 if brd0 > brd1. Panics if boards are not equal in dimension.
 func compareBoards(brd0, brd1 board) int {
 	m := len(brd0)
 	if m != len(brd1) {
-		panic("lessBoards: cannot compare boards of differing dimensions")
+		panic("compareBoards: cannot compare boards of differing dimensions")
 	}
 
 	n := len(brd0[0])
 	if n != len(brd1[0]) {
-		panic("lessBoards: cannot compare boards of differing dimensions")
+		panic("compareBoards: cannot compare boards of differing dimensions")
 	}
 
 	var x, y pawn
