@@ -46,7 +46,7 @@ func newBoard(m, n int) board {
 
 	brd := make(board, 0, m)
 
-	// Add black pawns to first row
+	// Add black pawns to top row
 	brd = append(brd, make([]pawn, 0, n))
 	for i := 0; i < n; i++ {
 		brd[0] = append(brd[0], blackPawn)
@@ -60,7 +60,7 @@ func newBoard(m, n int) board {
 		}
 	}
 
-	// Add white pawns to last row
+	// Add white pawns to bottom row
 	brd = append(brd, make([]pawn, 0, n))
 	for i := 0; i < n; i++ {
 		brd[m-1] = append(brd[m-1], whitePawn)
@@ -130,6 +130,7 @@ func symmetricEqualBoards(brd0, brd1 board) bool {
 	return true
 }
 
+// lessBoards compares two boards.
 func lessBoards(brd0, brd1 board) bool {
 	if compareBoards(brd0, brd1) < 0 {
 		return true
@@ -138,6 +139,7 @@ func lessBoards(brd0, brd1 board) bool {
 	return false
 }
 
+// lessEqBoards compares two boards.
 func lessEqBoards(brd0, brd1 board) bool {
 	if 0 < compareBoards(brd0, brd1) {
 		return false
@@ -146,6 +148,7 @@ func lessEqBoards(brd0, brd1 board) bool {
 	return true
 }
 
+// compareBoards compares two boards returning -1 if brd0 < brd1, 0 if brd0 = brd1, and 1 if brd0 > brd1. Panics if boards are not equal in dimension.
 func compareBoards(brd0, brd1 board) int {
 	m := len(brd0)
 	if m != len(brd1) {

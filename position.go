@@ -4,18 +4,19 @@ import (
 	"bytes"
 )
 
-// position joins a board, state, and a set of available pawn options with a pawn
-// option selection.
+// position joins a state, board, and a set of available pawn options.
 type position struct {
-	brd board    // Board position
 	st  state    // State of the game
+	brd board    // Board position
 	pos pawnOpts // Available pawn options
 }
 
+// String returns the formated representation of a position.
 func (psn *position) String() string {
 	return string(psn.toBytes())
 }
 
+// toBytes returns the formated representation of a position.
 func (psn *position) toBytes() []byte {
 	buf := bytes.Buffer{}
 
@@ -61,6 +62,7 @@ func equalPositions(psn0, psn1 *position) bool {
 	}
 }
 
+// lessPositions compares two positions. The state field is checked first, then boards are compared.
 func lessPositions(psn0, psn1 *position) bool {
 	if comparePositions(psn0, psn1) < 0 {
 		return true
@@ -69,6 +71,7 @@ func lessPositions(psn0, psn1 *position) bool {
 	return false
 }
 
+// lessEqPositions compares two positions. The state field is checked first, then boards are compared.
 func lessEqPositions(psn0, psn1 *position) bool {
 	if 0 < comparePositions(psn0, psn1) {
 		return false
@@ -77,6 +80,7 @@ func lessEqPositions(psn0, psn1 *position) bool {
 	return true
 }
 
+// comparePositions compares two positions returning -1 if psn0 < psn1, 0 if psn0 = psn1, and 1 if psn0 > psn1. The state property is compared first, then the board field is compared. Panics if either position is nil.
 func comparePositions(psn0, psn1 *position) int {
 	switch {
 	case psn0 == nil, psn1 == nil:

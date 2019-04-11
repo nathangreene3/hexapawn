@@ -22,6 +22,9 @@ type side byte
 // state indicates how the game will procede.
 type state byte
 
+// history is a set of positions that occur in a single game.
+type history []*event
+
 // game joins a board, state, mode, and a history of events reached in alternating
 // turns.
 type game struct {
@@ -34,9 +37,9 @@ type game struct {
 // Game constants
 const (
 	// Actions
-	forward action = iota
-	captureLeft
-	captureRight
+	forward      action = iota // Move forward from side's perspective
+	captureLeft                // Capture left from side's perspective
+	captureRight               // Capture right from side's perspective
 
 	// Modes
 	pvp mode = iota // Player vs player
@@ -95,7 +98,7 @@ func newGame(m, n int, md mode) *game {
 		brd: newBoard(m, n),
 		st:  whiteTurn,
 		md:  md,
-		hst: make(history, 0, 32), // TODO: Find the total number of legal states (24?)
+		hst: make(history, 0, 32), // TODO: Find the total number of legal states depending on input m and n
 	}
 }
 
@@ -148,22 +151,21 @@ func play(m, n int, md mode) {
 	}
 }
 
-func playNGames(numGames, m, n int, md mode) string {
+func playNGames(numGames, numTrainSessions, m, n int, md mode) string {
 	var (
-		gm            *game     // Game to be played
-		psn           *position // Position at each turn
-		trainSessions = 1000    // Number of games to train each side on
-		whiteWins     int       // Number of white wins
-		blackWins     int       // Number of black wins
-		stalemates    int       // Number of stalemates reached
+		gm         *game     // Game to be played
+		psn        *position // Position at each turn
+		whiteWins  int       // Number of white wins
+		blackWins  int       // Number of black wins
+		stalemates int       // Number of stalemates reached
 	)
 
 	switch md {
 	case cvc:
 		white := newAutoPlayer(whiteSide)
 		black := newAutoPlayer(blackSide)
-		white.train(m, n, trainSessions)
-		black.train(m, n, trainSessions)
+		white.train(m, n, numTrainSessions)
+		black.train(m, n, numTrainSessions)
 
 		for ; 0 < numGames; numGames-- {
 			gm = newGame(m, n, md)
@@ -199,7 +201,6 @@ func playNGames(numGames, m, n int, md mode) string {
 			}
 		}
 
-		fmt.Println(white.String())
 		fmt.Println("white boards:", len(white.psns))
 	case cvp: // TODO
 	case pvc: // TODO
@@ -290,9 +291,10 @@ func (gm *game) move(evnt *event) {
 			} else {
 				gm.st = whiteTurn
 			}
+		case space:
+			fallthrough
 		default:
-			// panic("move: cannot move space")
-			log.Fatalf("move: cannot move space\n%v\nevent: %v\n", gm.brd, evnt.poSlc)
+			panic("move: cannot move space")
 		}
 	} else {
 		gm.st = stalemate

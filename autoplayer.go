@@ -26,7 +26,7 @@ type autoPlayer struct {
 func (ap *autoPlayer) String() string {
 	bldr := strings.Builder{}
 
-	bldr.Write([]byte{byte(ap.sd), '\n'})
+	bldr.WriteString(fmt.Sprintf("side: %q\n", byte(ap.sd)))
 	for i := range ap.psns {
 		bldr.WriteString(ap.psns[i].String())
 	}
@@ -43,7 +43,7 @@ func newAutoPlayer(sd side) *autoPlayer {
 	return &autoPlayer{sd: sd, psns: make([]*position, 0, 32)}
 }
 
-// train returns an auto player that is capable of playing hexapawn.
+// train an auto player on a number of random games.
 func (ap *autoPlayer) train(m, n, numGames int) {
 	var (
 		gameOver   bool          // Indicates game was won/lost
@@ -87,7 +87,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 				case whiteSide:
 					for _, hstpsn := range gm.hst {
 						index = ap.index(hstpsn.psn)
-						if index == len(ap.psns) {
+						if index < 0 {
 							continue
 						}
 
@@ -109,7 +109,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 				case blackSide:
 					for _, hstpsn := range gm.hst {
 						index = ap.index(hstpsn.psn)
-						if index == len(ap.psns) {
+						if index < 0 {
 							continue
 						}
 
@@ -136,7 +136,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 				case whiteSide:
 					for _, hstpsn := range gm.hst {
 						index = ap.index(hstpsn.psn)
-						if index == len(ap.psns) {
+						if index < 0 {
 							continue
 						}
 
@@ -158,7 +158,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 				case blackSide:
 					for _, hstpsn := range gm.hst {
 						index = ap.index(hstpsn.psn)
-						if index == len(ap.psns) {
+						if index < 0 {
 							continue
 						}
 
@@ -183,7 +183,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 			case stalemate:
 				for _, hstpsn := range gm.hst {
 					index = ap.index(hstpsn.psn)
-					if index == len(ap.psns) {
+					if index < 0 {
 						continue
 					}
 
@@ -213,7 +213,7 @@ func (ap *autoPlayer) train(m, n, numGames int) {
 	}
 }
 
-// randPawnOpt returns a random pawn option (nil if none available).
+// randPawnOpt returns a random pawn option at a given position (nil if none available).
 func randPawnOpt(psn *position) *pawnOpt {
 	n := len(psn.pos)
 	if 0 < n {
@@ -228,18 +228,15 @@ func randPawnOpt(psn *position) *pawnOpt {
 // options.
 func (ap *autoPlayer) move(psn *position) *event {
 	index := ap.index(psn)
-	if index == len(ap.psns) {
+	if index < 0 {
 		index = ap.insert(psn)
 	}
-	fmt.Printf("psn.pos:\n%s\n", psn)
-	fmt.Printf("ap.psns[%d]:\n%s\n", index, ap.psns[index])
 
 	choice := weight(rand.Float64())
 	var sum weight
 	for _, po := range ap.psns[index].pos {
 		sum += po.wght
 		if choice <= sum {
-			fmt.Printf("po: %v\n", po)
 			return &event{psn: copyPosition(psn), poSlc: copyPawnOpt(po)}
 		}
 	}
@@ -263,23 +260,18 @@ func (ap *autoPlayer) remove(i int) *position {
 }
 
 // index returns the index a position is found in an auto player. If the position
-// is not found, len(ap.psns) is returned.
+// is not found, -1 is returned.
 func (ap *autoPlayer) index(psn *position) int {
-	// for i := range ap.psns {
-	// 	if equalPositions(ap.psns[i], psn) {
-	// 		return i
-	// 	}
-	// }
+	n := len(ap.psns)
+	index := sort.Search(n, func(i int) bool { return lessEqPositions(psn, ap.psns[i]) })
+	if index < n && equalPositions(psn, ap.psns[index]) {
+		return index
+	}
 
-	// return len(ap.psns)
-
-	// return ap.search(psn, 0, len(ap.psns)-1)
-
-	return sort.Search(len(ap.psns), func(i int) bool { return lessEqPositions(psn, ap.psns[i]) })
+	return -1
 }
 
-// Less returns true if each less-than pawn comparison in two boards is true and
-// false if otherwise.
+// less compares two indexed positions.
 func (ap *autoPlayer) less(i, j int) bool {
 	if comparePositions(ap.psns[i], ap.psns[j]) < 0 {
 		return true
@@ -288,51 +280,11 @@ func (ap *autoPlayer) less(i, j int) bool {
 	return false
 }
 
+// lessEq compares two indexed positions.
 func (ap *autoPlayer) lessEq(i, j int) bool {
 	if 0 < comparePositions(ap.psns[i], ap.psns[j]) {
 		return false
 	}
 
 	return true
-}
-
-func (ap *autoPlayer) isSorted() bool {
-	n := len(ap.psns) - 1
-	for i := 0; i < n; i++ {
-		if 0 < comparePositions(ap.psns[i], ap.psns[i+1]) {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (ap *autoPlayer) search(psn *position, i, j int) int {
-	var k int
-
-	// THIS WORKS
-	// for i <= j {
-	// 	k = i + int(uint(j-i)>>1)
-	// 	switch comparePositions(psn, ap.psns[k]) {
-	// 	case -1:
-	// 		j = k - 1
-	// 	case 1:
-	// 		i = k + 1
-	// 	default:
-	// 		return k
-	// 	}
-	// }
-
-	// THIS DOESN'T WORK
-	for i < j {
-		k = i + int(uint(j-i)>>1)
-		if 0 < comparePositions(psn, ap.psns[k]) {
-			i = k + 1 // ap.psns[k] < psn
-			continue
-		}
-
-		j = k // psn <= ap.psns[k]
-	}
-
-	return i
 }

@@ -42,9 +42,15 @@ func (pos pawnOpts) insert(po *pawnOpt) int {
 }
 
 // index returns the index a pawn option is found in a set of pawn options. If the
-// pawn option is not found, len(pos) is returned.
+// pawn option is not found, -1 is returned.
 func (pos pawnOpts) index(po *pawnOpt) int {
-	return sort.Search(len(pos), func(i int) bool { return lessPawnOpts(po, pos[i]) })
+	n := len(pos)
+	index := sort.Search(n, func(i int) bool { return lessPawnOpts(po, pos[i]) })
+	if index < n && equalPawnOpts(po, pos[index]) {
+		return index
+	}
+
+	return -1
 }
 
 // availPawnOpts returns a set of pawn options available given a board state.
@@ -88,10 +94,15 @@ func availPawnOpts(brd board, st state) pawnOpts {
 
 // copyPawnOpt returns a copy of a pawn option.
 func copyPawnOpt(po *pawnOpt) *pawnOpt {
-	return &pawnOpt{m: po.m, n: po.n, act: po.act, wght: po.wght}
+	return &pawnOpt{
+		m:    po.m,
+		n:    po.n,
+		act:  po.act,
+		wght: po.wght,
+	}
 }
 
-// equalPawnOpts returns true if each pawn option field is equal, EXCEPT for the weight field.
+// equalPawnOpts returns true if each pawn option field is equal, EXCEPT for the weight field. If both pawn options are nil, true is returned.
 func equalPawnOpts(po0, po1 *pawnOpt) bool {
 	switch {
 	case po0 == nil:
@@ -118,6 +129,7 @@ func (pos pawnOpts) less(i, j int) bool {
 	return false
 }
 
+// lessPawnOpts compares two pawn options on the position (m,n) and the action field in that order. Panics if either pawn option is nil.
 func lessPawnOpts(po0, po1 *pawnOpt) bool {
 	if comparePawnOpts(po0, po1) < 0 {
 		return true
@@ -126,6 +138,7 @@ func lessPawnOpts(po0, po1 *pawnOpt) bool {
 	return false
 }
 
+// lessEqPawnOpts compares two pawn options on the position (m,n) and the action field in that order. Panics if either pawn option is nil.
 func lessEqPawnOpts(po0, po1 *pawnOpt) bool {
 	if 0 < comparePawnOpts(po0, po1) {
 		return false
@@ -134,6 +147,7 @@ func lessEqPawnOpts(po0, po1 *pawnOpt) bool {
 	return true
 }
 
+// comparePawnOpts compares two pawn options on the position (m,n) and the action field in that order. Returns -1 if po0 < po1, 0 if po0 = po1, and 1 if po0 > po1. Panics if either pawn option is nil.
 func comparePawnOpts(po0, po1 *pawnOpt) int {
 	switch {
 	case po0 == nil, po1 == nil:
