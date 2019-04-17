@@ -99,7 +99,7 @@ func newGame(m, n int, md mode) *game {
 		brd: newBoard(m, n),
 		st:  whiteTurn,
 		md:  md,
-		hst: make(history, 0, 32), // TODO: Find the total number of legal states depending on input m and n
+		hst: make(history, 0, 32), // TODO: Find an upper bound on the total number of legal states depending on input m and n
 	}
 }
 
@@ -124,10 +124,10 @@ func play(m, n int, md mode) {
 			switch gm.st {
 			case whiteTurn:
 				// fmt.Printf("%s\nwhite to move\n\n", gm.String())
-				gm.move(white.choosePawnOpt(psn))
+				gm.move(white.chooseEvent(psn))
 			case blackTurn:
 				// fmt.Printf("%s\nblack to move\n\n", gm.String())
-				gm.move(black.choosePawnOpt(psn))
+				gm.move(black.chooseEvent(psn))
 			default:
 				gameOver = true
 			}
@@ -171,6 +171,7 @@ func playNGames(numGames, numTrainSessions int, learningRate weight, m, n int, m
 
 		for ; 0 < numGames; numGames-- {
 			gm = newGame(m, n, md)
+			// fmt.Println(gm)
 			for {
 				psn = &position{
 					brd: gm.brd,
@@ -179,12 +180,14 @@ func playNGames(numGames, numTrainSessions int, learningRate weight, m, n int, m
 				}
 
 				if gm.st == whiteTurn {
-					gm.move(white.choosePawnOpt(psn))
+					gm.move(white.chooseEvent(psn))
+					// fmt.Println(gm)
 					continue
 				}
 
 				if gm.st == blackTurn {
-					gm.move(black.choosePawnOpt(psn))
+					gm.move(black.chooseEvent(psn))
+					// fmt.Println(gm)
 					continue
 				}
 

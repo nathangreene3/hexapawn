@@ -76,7 +76,7 @@ func (ap *autoPlayer) train(numGames int, learningRate weight) {
 			case whiteTurn:
 				switch ap.sd {
 				case whiteSide:
-					gm.move(ap.choosePawnOpt(psn))
+					gm.move(ap.chooseEvent(psn))
 				case blackSide:
 					gm.move(&event{psn: copyPosition(psn), poSlc: randPawnOpt(psn)})
 				}
@@ -85,7 +85,7 @@ func (ap *autoPlayer) train(numGames int, learningRate weight) {
 				case whiteSide:
 					gm.move(&event{psn: copyPosition(psn), poSlc: randPawnOpt(psn)})
 				case blackSide:
-					gm.move(ap.choosePawnOpt(psn))
+					gm.move(ap.chooseEvent(psn))
 				}
 			case whiteWin:
 				switch ap.sd {
@@ -229,10 +229,10 @@ func randPawnOpt(psn *position) *pawnOpt {
 	return nil
 }
 
-// choosePawnOpt returns an event representing an action taken on a given position. An event
+// chooseEvent returns an event representing an action taken on a given position. An event
 // with no pawn option selected is returned if a position has no available pawn
 // options.
-func (ap *autoPlayer) choosePawnOpt(psn *position) *event {
+func (ap *autoPlayer) chooseEvent(psn *position) *event {
 	index := ap.index(psn)
 	if index < 0 {
 		index = ap.insert(psn)
