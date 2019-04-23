@@ -8,7 +8,7 @@ import (
 
 func main() {
 	rand.Seed(int64(time.Now().Nanosecond()))
-	fmt.Println(playNGames(100, 1000, 0.1, 5, 5, cvc))
+	fmt.Println(playNGames(1, 1000, 0.1, 3, 3, cvc))
 }
 
 func run() {

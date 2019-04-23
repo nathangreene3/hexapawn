@@ -171,7 +171,7 @@ func playNGames(numGames, numTrainSessions int, learningRate weight, m, n int, m
 
 		for ; 0 < numGames; numGames-- {
 			gm = newGame(m, n, md)
-			// fmt.Println(gm)
+			fmt.Println(gm)
 			for {
 				psn = &position{
 					brd: gm.brd,
@@ -181,13 +181,13 @@ func playNGames(numGames, numTrainSessions int, learningRate weight, m, n int, m
 
 				if gm.st == whiteTurn {
 					gm.move(white.chooseEvent(psn))
-					// fmt.Println(gm)
+					fmt.Println(gm)
 					continue
 				}
 
 				if gm.st == blackTurn {
 					gm.move(black.chooseEvent(psn))
-					// fmt.Println(gm)
+					fmt.Println(gm)
 					continue
 				}
 
